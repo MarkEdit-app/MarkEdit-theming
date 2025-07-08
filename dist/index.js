@@ -90,15 +90,17 @@ function initContext() {
     darkOriginalRules: {},
     cachedExtensions: []
   };
-  const originalTheme = EditorView.theme;
-  EditorView.theme = (spec, options) => {
-    const theme = originalTheme(spec, options);
-    if (spec["@keyframes cm-blink"] === void 0 && spec[".cm-md-previewButton"] === void 0) {
-      theme.spec = spec;
-      $context().cachedExtensions.push(theme);
-    }
-    return theme;
-  };
+  if ($global.cachedThemes === void 0) {
+    const originalTheme = EditorView.theme;
+    EditorView.theme = (spec, options) => {
+      const theme = originalTheme(spec, options);
+      if (spec["@keyframes cm-blink"] === void 0 && spec[".cm-md-previewButton"] === void 0) {
+        theme.spec = spec;
+        $context().cachedExtensions.push(theme);
+      }
+      return theme;
+    };
+  }
   MarkEdit.addExtension($context().configurator.of([]));
   MarkEdit.onEditorReady((editor) => updateTheme(editor));
   Object.defineProperty($global.config, "theme", {
@@ -117,7 +119,7 @@ function updateTheme(editor) {
   editor.dispatch({
     effects: $context().configurator.reconfigure(theme?.extension ?? [])
   });
-  const spec = findExtension($context().cachedExtensions, theme?.extension)?.spec;
+  const spec = findExtension($global.cachedThemes ?? $context().cachedExtensions, theme?.extension)?.spec;
   const disabled = theme === void 0;
   $context().styleSheet.disabled = disabled;
   overrideStyles(

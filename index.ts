@@ -74,6 +74,7 @@ export interface CustomTheme {
  */
 const $global = (window as unknown) as Window & {
   config: { theme: string; };
+  cachedThemes?: Extension[];
   __markeditTheming__: { // The package namespace
     mainThemeName?: string;
     styleSheet: HTMLStyleElement;
@@ -106,17 +107,19 @@ function initContext() {
   };
 
   // Hook the theme creation process to save the specs
-  const originalTheme = EditorView.theme;
-  EditorView.theme = (spec, options) => {
-    const theme = originalTheme(spec, options);
-    if (spec['@keyframes cm-blink'] === undefined && spec['.cm-md-previewButton'] === undefined) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (theme as any).spec = spec;
-      $context().cachedExtensions.push(theme);
-    }
+  if ($global.cachedThemes === undefined) {
+    const originalTheme = EditorView.theme;
+    EditorView.theme = (spec, options) => {
+      const theme = originalTheme(spec, options);
+      if (spec['@keyframes cm-blink'] === undefined && spec['.cm-md-previewButton'] === undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (theme as any).spec = spec;
+        $context().cachedExtensions.push(theme);
+      }
 
-    return theme;
-  };
+      return theme;
+    };
+  }
 
   // Update when the editor is ready
   MarkEdit.addExtension($context().configurator.of([]));
@@ -148,7 +151,7 @@ function updateTheme(editor: EditorView) {
 
   // Get the spec from the used EditorView.theme
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const spec = (findExtension($context().cachedExtensions, theme?.extension) as any)?.spec;
+  const spec = (findExtension($global.cachedThemes ?? $context().cachedExtensions, theme?.extension) as any)?.spec;
   const disabled = theme === undefined;
 
   // Reconfigure the style sheets
