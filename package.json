@@ -1,0 +1,29 @@
+{
+  "name": "markedit-theming",
+  "version": "0.1.0",
+  "description": "Create custom MarkEdit themes easily.",
+  "scripts": {
+    "lint": "eslint . --config eslint.config.mjs",
+    "build": "yarn lint && vite build && node build.mjs"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "license": "MIT",
+  "devDependencies": {
+    "@codemirror/commands": "^6.0.0",
+    "@codemirror/language": "^6.0.0",
+    "@codemirror/search": "^6.0.0",
+    "@codemirror/state": "^6.0.0",
+    "@codemirror/view": "^6.0.0",
+    "@lezer/markdown": "^1.0.0",
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.35.1",
+    "@typescript-eslint/parser": "^8.35.1",
+    "eslint": "^9.30.1",
+    "markedit-api": "https://github.com/MarkEdit-app/MarkEdit-api#v0.11.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0"
+  }
+}
