@@ -85,9 +85,8 @@ const $global = (window as unknown) as Window & {
   }
 };
 
-const $context = () => {
-  return $global.__markeditTheming__;
-};
+const $context = () => $global.__markeditTheming__;
+const $scheme = matchMedia('(prefers-color-scheme: dark)');
 
 // Initialize the shared object (only once, works like a singleton)
 if (typeof $context() !== 'object') {
@@ -108,7 +107,7 @@ function initContext() {
   MarkEdit.addExtension($context().configurator.of([]));
   MarkEdit.onEditorReady(editor => updateTheme(editor));
 
-  // Update when the app main theme changed (fires when color scheme is changed too)
+  // Update when the app main theme changed
   Object.defineProperty($global.config, 'theme', {
     get() {
       return $context().mainThemeName;
@@ -118,13 +117,18 @@ function initContext() {
       requestAnimationFrame(() => updateTheme(MarkEdit.editorView));
     },
   });
+
+  // Update when the color scheme changed
+  $scheme.addEventListener('change', () => {
+    requestAnimationFrame(() => updateTheme(MarkEdit.editorView));
+  });
 }
 
 /**
  * Update the theme, including the extension and style sheets.
  */
 function updateTheme(editor: EditorView) {
-  const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = $scheme.matches;
   const theme = isDark ? $context().customThemes.dark : $context().customThemes.light;
 
   // Reconfigure the extension

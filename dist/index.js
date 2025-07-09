@@ -103,9 +103,8 @@ function overrideThemes(themes) {
   }
 }
 const $global = window;
-const $context = () => {
-  return $global.__markeditTheming__;
-};
+const $context = () => $global.__markeditTheming__;
+const $scheme = matchMedia("(prefers-color-scheme: dark)");
 if (typeof $context() !== "object") {
   initContext();
 }
@@ -128,9 +127,12 @@ function initContext() {
       requestAnimationFrame(() => updateTheme(MarkEdit.editorView));
     }
   });
+  $scheme.addEventListener("change", () => {
+    requestAnimationFrame(() => updateTheme(MarkEdit.editorView));
+  });
 }
 function updateTheme(editor) {
-  const isDark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark = $scheme.matches;
   const theme = isDark ? $context().customThemes.dark : $context().customThemes.light;
   editor.dispatch({
     effects: $context().configurator.reconfigure(theme?.extension ?? [])
