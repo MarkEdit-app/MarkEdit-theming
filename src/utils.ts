@@ -1,5 +1,11 @@
 import type { Extension } from '@codemirror/state';
 
+type Spec = Record<string, Record<string, string>>;
+type Theme = Extension & { value?: { rules?: string[] } };
+
+/**
+ * Inject a <style> element from the input CSS text.
+ */
 export function injectStyles(cssText: string): HTMLStyleElement {
   const style = document.createElement('style');
   style.textContent = cssText;
@@ -8,29 +14,31 @@ export function injectStyles(cssText: string): HTMLStyleElement {
 }
 
 /**
- * Returns the cache extension that contains the target extension.
+ * Returns the spec from a CodeMirror theme.
  */
-export function findExtension(caches: Extension[], target?: Extension): Extension | undefined {
-  for (const cache of caches) {
-    if (extensionContains(cache, target)) {
-      return cache;
-    }
+export function extractTheme(extension?: Extension): Spec {
+  if (extension === undefined) {
+    return {};
   }
 
-  return undefined;
+  return Object.fromEntries(
+    flattenThemes(extension).flatMap(theme => {
+      const rules = theme.value?.rules?.join('\n') ?? '';
+      return Object.entries(parseCssRules(rules));
+    }),
+  );
 }
 
 /**
  * Find the background or background-color from a spec.
  */
-export function findBackground(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  spec: [string, any][],
-  selector: string,
-): string | undefined {
-  for (const [key, value] of spec) {
+export function findBackground(spec: Spec, selector: string): string | undefined {
+  for (const [key, value] of Object.entries(spec)) {
     if (key.includes(selector)) {
-      return value['background'] ?? value['backgroundColor'];
+      const background: string | undefined = value['background'] ?? value['backgroundColor'];
+      if (background !== undefined) {
+        return background;
+      }
     }
   }
 
@@ -50,17 +58,50 @@ export function lighterColor(textColor: string): string | undefined {
   return `rgba(${red}, ${green}, ${blue}, 0.6)`;
 }
 
+// MARK: - Private
+
 /**
- * Returns true when the source extension contains the target extension.
+ * Get flattened themes, since CodeMirror Extension is recursively declared.
  */
-function extensionContains(source: Extension, target?: Extension): boolean {
-  if (Array.isArray(target)) {
-    return target.some(o => extensionContains(source, o));
+function flattenThemes(root: Extension): Theme[] {
+  const result: Theme[] = [];
+  const stack: Extension[] = [root];
+
+  while (stack.length > 0) {
+    const node = stack.pop()!;
+    if (Array.isArray(node)) {
+      node.forEach(o => stack.push(o));
+    } else if ('extension' in node) {
+      stack.push(node.extension);
+    } else {
+      result.push(node);
+    }
   }
 
-  if (Array.isArray(source)) {
-    return source.some(o => extensionContains(o, target));
+  return result;
+}
+
+/**
+ * Parse CSS rules from CSS text, we only care about background colors.
+ */
+function parseCssRules(cssText: string): Spec {
+  const result: Spec = {};
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(cssText);
+
+  for (const rule of sheet.cssRules) {
+    const { style, selectorText: selector } = rule as CSSStyleRule;
+    const { background, backgroundColor } = style;
+    result[selector] = {};
+
+    if (background.length > 0) {
+      result[selector].background = background;
+    }
+
+    if (backgroundColor.length > 0) {
+      result[selector].backgroundColor = backgroundColor;
+    }
   }
 
-  return target === source;
+  return result;
 }

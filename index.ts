@@ -1,8 +1,9 @@
 import { Compartment, type Extension } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
 import { MarkEdit } from 'markedit-api';
 import { selectors, cssText } from './src/const';
-import { injectStyles, findExtension, findBackground, lighterColor } from './src/utils';
+import { injectStyles, extractTheme, findBackground, lighterColor } from './src/utils';
+
+import type { EditorView } from '@codemirror/view';
 import type { OriginalRules } from './src/types';
 
 /**
@@ -74,7 +75,6 @@ export interface CustomTheme {
  */
 const $global = (window as unknown) as Window & {
   config: { theme: string; };
-  cachedThemes?: Extension[];
   __markeditTheming__: { // The package namespace
     mainThemeName?: string;
     styleSheet: HTMLStyleElement;
@@ -82,7 +82,6 @@ const $global = (window as unknown) as Window & {
     customThemes: Parameters<typeof overrideThemes>[0];
     lightOriginalRules: OriginalRules;
     darkOriginalRules: OriginalRules;
-    cachedExtensions: Extension[];
   }
 };
 
@@ -103,23 +102,7 @@ function initContext() {
     customThemes: {},
     lightOriginalRules: {},
     darkOriginalRules: {},
-    cachedExtensions: [],
   };
-
-  // Hook the theme creation process to save the specs
-  if ($global.cachedThemes === undefined) {
-    const originalTheme = EditorView.theme;
-    EditorView.theme = (spec, options) => {
-      const theme = originalTheme(spec, options);
-      if (spec['@keyframes cm-blink'] === undefined && spec['.cm-md-previewButton'] === undefined) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (theme as any).spec = spec;
-        $context().cachedExtensions.push(theme);
-      }
-
-      return theme;
-    };
-  }
 
   // Update when the editor is ready
   MarkEdit.addExtension($context().configurator.of([]));
@@ -150,8 +133,7 @@ function updateTheme(editor: EditorView) {
   });
 
   // Get the spec from the used EditorView.theme
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const spec = (findExtension($global.cachedThemes ?? $context().cachedExtensions, theme?.extension) as any)?.spec;
+  const spec = extractTheme(theme?.extension);
   const disabled = theme === undefined;
 
   // Reconfigure the style sheets
@@ -160,7 +142,7 @@ function updateTheme(editor: EditorView) {
     editor,
     isDark,
     disabled,
-    Object.entries(spec ?? {}),
+    spec,
     theme?.colors,
   );
 }
@@ -172,8 +154,7 @@ function overrideStyles(
   editor: EditorView,
   isDark: boolean,
   isDisabled: boolean,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  spec: [string, any][],
+  spec: Record<string, Record<string, string>>,
   colors?: CustomTheme['colors'],
 ) {
   const activeLine = findBackground(spec, '.cm-activeLine');

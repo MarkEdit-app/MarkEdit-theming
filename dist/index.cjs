@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const state = require("@codemirror/state");
-const view = require("@codemirror/view");
 const markeditApi = require("markedit-api");
 const selectors = {
   selectionBackground: ".cm-selectionBackground",
@@ -32,18 +31,24 @@ function injectStyles(cssText2) {
   document.head.appendChild(style);
   return style;
 }
-function findExtension(caches, target) {
-  for (const cache of caches) {
-    if (extensionContains(cache, target)) {
-      return cache;
-    }
+function extractTheme(extension) {
+  if (extension === void 0) {
+    return {};
   }
-  return void 0;
+  return Object.fromEntries(
+    flattenThemes(extension).flatMap((theme) => {
+      const rules = theme.value?.rules?.join("\n") ?? "";
+      return Object.entries(parseCssRules(rules));
+    })
+  );
 }
 function findBackground(spec, selector) {
-  for (const [key, value] of spec) {
+  for (const [key, value] of Object.entries(spec)) {
     if (key.includes(selector)) {
-      return value["background"] ?? value["backgroundColor"];
+      const background = value["background"] ?? value["backgroundColor"];
+      if (background !== void 0) {
+        return background;
+      }
     }
   }
   return void 0;
@@ -56,14 +61,37 @@ function lighterColor(textColor) {
   const [red, green, blue] = components.slice(1, 4).map(Number);
   return `rgba(${red}, ${green}, ${blue}, 0.6)`;
 }
-function extensionContains(source, target) {
-  if (Array.isArray(target)) {
-    return target.some((o) => extensionContains(source, o));
+function flattenThemes(root) {
+  const result = [];
+  const stack = [root];
+  while (stack.length > 0) {
+    const node = stack.pop();
+    if (Array.isArray(node)) {
+      node.forEach((o) => stack.push(o));
+    } else if ("extension" in node) {
+      stack.push(node.extension);
+    } else {
+      result.push(node);
+    }
   }
-  if (Array.isArray(source)) {
-    return source.some((o) => extensionContains(o, target));
+  return result;
+}
+function parseCssRules(cssText2) {
+  const result = {};
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(cssText2);
+  for (const rule of sheet.cssRules) {
+    const { style, selectorText: selector } = rule;
+    const { background, backgroundColor } = style;
+    result[selector] = {};
+    if (background.length > 0) {
+      result[selector].background = background;
+    }
+    if (backgroundColor.length > 0) {
+      result[selector].backgroundColor = backgroundColor;
+    }
   }
-  return target === source;
+  return result;
 }
 function overrideThemes(themes) {
   if (themes.light !== void 0) {
@@ -89,20 +117,8 @@ function initContext() {
     configurator: new state.Compartment(),
     customThemes: {},
     lightOriginalRules: {},
-    darkOriginalRules: {},
-    cachedExtensions: []
+    darkOriginalRules: {}
   };
-  if ($global.cachedThemes === void 0) {
-    const originalTheme = view.EditorView.theme;
-    view.EditorView.theme = (spec, options) => {
-      const theme = originalTheme(spec, options);
-      if (spec["@keyframes cm-blink"] === void 0 && spec[".cm-md-previewButton"] === void 0) {
-        theme.spec = spec;
-        $context().cachedExtensions.push(theme);
-      }
-      return theme;
-    };
-  }
   markeditApi.MarkEdit.addExtension($context().configurator.of([]));
   markeditApi.MarkEdit.onEditorReady((editor) => updateTheme(editor));
   Object.defineProperty($global.config, "theme", {
@@ -121,14 +137,14 @@ function updateTheme(editor) {
   editor.dispatch({
     effects: $context().configurator.reconfigure(theme?.extension ?? [])
   });
-  const spec = findExtension($global.cachedThemes ?? $context().cachedExtensions, theme?.extension)?.spec;
+  const spec = extractTheme(theme?.extension);
   const disabled = theme === void 0;
   $context().styleSheet.disabled = disabled;
   overrideStyles(
     editor,
     isDark,
     disabled,
-    Object.entries(spec ?? {}),
+    spec,
     theme?.colors
   );
 }

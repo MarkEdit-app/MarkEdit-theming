@@ -11,7 +11,7 @@ Add `markedit-theming` to your (TypeScript) project's dependencies:
 ```json
 {
   "dependencies": {
-    "markedit-theming": "https://github.com/MarkEdit-app/MarkEdit-theming#v0.2.0"
+    "markedit-theming": "https://github.com/MarkEdit-app/MarkEdit-theming#v0.3.0"
   }
 }
 ```
@@ -28,8 +28,6 @@ overrideThemes({
 ```
 
 This package is fully typed and documented, see [index.d.ts](/dist/index.d.ts) for details.
-
-> It's encouraged to import `markedit-theming` as early as possible.
 
 ## Community CodeMirror Themes
 
