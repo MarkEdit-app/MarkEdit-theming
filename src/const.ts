@@ -1,6 +1,7 @@
 const selectors = {
   selectionBackground: '.cm-selectionBackground',
   lineGutter: '.cm-lineNumbers > .cm-activeLineGutter',
+  foldGutter: '.cm-foldGutter, .cm-foldPlaceholder',
   visibleSpace: '.cm-visibleSpace, .cm-visibleSpace::before, .cm-visibleLineBreak, .cm-visibleLineBreak::before',
   matchingBracket: '.cm-matchingBracket',
   activeIndicator: '.cm-md-activeIndicator',
@@ -12,10 +13,14 @@ const cssText = `
   .cm-activeLineGutter {
     background: inherit !important;
   }
+  .cm-searchMatch.cm-searchMatch-selected {
+    outline: inherit !important;
+  }
   .cm-md-bold:not(.tok-meta), .cm-md-italic:not(.tok-meta), .cm-md-quote:not(.cm-md-quoteMark) {
     color: inherit !important;
   }
   ${selectors.lineGutter} {}
+  ${selectors.foldGutter} {}
   ${selectors.visibleSpace} {}
   ${selectors.matchingBracket} { box-shadow: unset !important; }
   ${selectors.activeIndicator} { box-shadow: unset !important; }

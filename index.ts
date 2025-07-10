@@ -171,6 +171,7 @@ function overrideStyles(
     [selectors.activeIndicator, activeLine, 'background'],
     [selectors.matchingBracket, matchingBracket, 'background'],
     [selectors.lineGutter, primaryColor, 'color'],
+    [selectors.foldGutter, secondaryColor, 'color'],
     [selectors.visibleSpace, secondaryColor, 'color'],
     [selectors.accentColor, colors?.accentColor, 'color'],
     [selectors.syntaxMarker, colors?.syntaxMarker, 'color'],

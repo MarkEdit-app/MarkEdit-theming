@@ -5,6 +5,7 @@ const markeditApi = require("markedit-api");
 const selectors = {
   selectionBackground: ".cm-selectionBackground",
   lineGutter: ".cm-lineNumbers > .cm-activeLineGutter",
+  foldGutter: ".cm-foldGutter, .cm-foldPlaceholder",
   visibleSpace: ".cm-visibleSpace, .cm-visibleSpace::before, .cm-visibleLineBreak, .cm-visibleLineBreak::before",
   matchingBracket: ".cm-matchingBracket",
   activeIndicator: ".cm-md-activeIndicator",
@@ -15,10 +16,14 @@ const cssText = `
   .cm-activeLineGutter {
     background: inherit !important;
   }
+  .cm-searchMatch.cm-searchMatch-selected {
+    outline: inherit !important;
+  }
   .cm-md-bold:not(.tok-meta), .cm-md-italic:not(.tok-meta), .cm-md-quote:not(.cm-md-quoteMark) {
     color: inherit !important;
   }
   ${selectors.lineGutter} {}
+  ${selectors.foldGutter} {}
   ${selectors.visibleSpace} {}
   ${selectors.matchingBracket} { box-shadow: unset !important; }
   ${selectors.activeIndicator} { box-shadow: unset !important; }
@@ -160,6 +165,7 @@ function overrideStyles(editor, isDark, isDisabled, spec, colors) {
     [selectors.activeIndicator, activeLine, "background"],
     [selectors.matchingBracket, matchingBracket, "background"],
     [selectors.lineGutter, primaryColor, "color"],
+    [selectors.foldGutter, secondaryColor, "color"],
     [selectors.visibleSpace, secondaryColor, "color"],
     [selectors.accentColor, colors?.accentColor, "color"],
     [selectors.syntaxMarker, colors?.syntaxMarker, "color"]

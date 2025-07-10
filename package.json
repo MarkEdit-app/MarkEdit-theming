@@ -1,6 +1,6 @@
 {
   "name": "markedit-theming",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "description": "Create custom MarkEdit themes easily.",
   "scripts": {
     "lint": "eslint . --config eslint.config.mjs",
