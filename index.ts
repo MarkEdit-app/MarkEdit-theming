@@ -173,7 +173,7 @@ function overrideStyles(
   tagStyles: TagStyle[],
   colors?: CustomTheme['colors'],
 ) {
-  const activeLine = findBackground(cssStyles, '.cm-activeLine');
+  const activeLine = findBackground(cssStyles, '.cm-activeLine', '.cm-activeLineGutter');
   const selectionBackground = findBackground(cssStyles, selectors.selectionBackground);
   const matchingBracket = findBackground(cssStyles, selectors.matchingBracket);
   const primaryColor = getComputedStyle(editor.contentDOM).color;

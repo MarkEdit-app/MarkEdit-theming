@@ -58,9 +58,9 @@ export function hasTaggedColor(styles: TagStyle[], tag: Tag): boolean {
 /**
  * Find the background or background-color from css styles.
  */
-export function findBackground(styles: Styles, selector: string): string | undefined {
+export function findBackground(styles: Styles, selector: string, exclude?: string): string | undefined {
   for (const [key, value] of Object.entries(styles)) {
-    if (key.includes(selector)) {
+    if (key.includes(selector) && (exclude === undefined || !key.includes(exclude))) {
       const background: string | undefined = value['background'] ?? value['backgroundColor'];
       if (background !== undefined) {
         return background;

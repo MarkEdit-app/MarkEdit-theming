@@ -54,9 +54,9 @@ function hasTaggedColor(styles, tag) {
     return false;
   });
 }
-function findBackground(styles, selector) {
+function findBackground(styles, selector, exclude) {
   for (const [key, value] of Object.entries(styles)) {
-    if (key.includes(selector)) {
+    if (key.includes(selector) && (exclude === void 0 || !key.includes(exclude))) {
       const background = value["background"] ?? value["backgroundColor"];
       if (background !== void 0) {
         return background;
@@ -164,7 +164,7 @@ function updateTheme(editor) {
   );
 }
 function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors) {
-  const activeLine = findBackground(cssStyles, ".cm-activeLine");
+  const activeLine = findBackground(cssStyles, ".cm-activeLine", ".cm-activeLineGutter");
   const selectionBackground = findBackground(cssStyles, selectors.selectionBackground);
   const matchingBracket = findBackground(cssStyles, selectors.matchingBracket);
   const primaryColor = getComputedStyle(editor.contentDOM).color;
