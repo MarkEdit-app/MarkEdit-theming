@@ -1,7 +1,18 @@
+import type { TagStyle } from '@codemirror/language';
 import type { Extension } from '@codemirror/state';
+import type { Tag } from '@lezer/highlight';
 
-type Spec = Record<string, Record<string, string>>;
-type Theme = Extension & { value?: { rules?: string[] } };
+type Styles = Record<string, Record<string, string>>;
+type Theme = Extension & { value?: { rules?: string[]; specs?: TagStyle[]; } };
+
+const $global = window as {
+  __extractStyleRules__?: (theme: Extension) => string[] | undefined;
+  __extractHighlightSpecs__?: (theme: Extension) => TagStyle[] | undefined;
+};
+
+// Prefer a stable version provided by the main app, which can be updated as the app evolves
+const extractStyleRules = $global.__extractStyleRules__ ?? ((theme: Theme) => theme.value?.rules);
+const extractHighlightSpecs = $global.__extractHighlightSpecs__ ?? ((theme: Theme) => theme.value?.specs);
 
 /**
  * Inject a <style> element from the input CSS text.
@@ -14,26 +25,41 @@ export function injectStyles(cssText: string): HTMLStyleElement {
 }
 
 /**
- * Returns the spec from a CodeMirror theme.
+ * Returns the extracted from a CodeMirror theme, including its css styles and tag styles.
  */
-export function extractTheme(extension?: Extension): Spec {
+export function extractTheme(extension?: Extension): [Styles, TagStyle[]] {
   if (extension === undefined) {
-    return {};
+    return [{}, []];
   }
 
-  return Object.fromEntries(
-    flattenThemes(extension).flatMap(theme => {
-      const rules = theme.value?.rules?.join('\n') ?? '';
-      return Object.entries(parseCssRules(rules));
-    }),
-  );
+  const themes = flattenThemes(extension);
+  const styles = Object.fromEntries(themes.flatMap(theme => {
+    const rules = extractStyleRules(theme)?.join('\n') ?? '';
+    return Object.entries(parseCssRules(rules));
+  }));
+
+  return [styles, themes.flatMap(theme => extractHighlightSpecs(theme) ?? [])];
 }
 
 /**
- * Find the background or background-color from a spec.
+ * Returns true if the tag styles have a certain color defined.
  */
-export function findBackground(spec: Spec, selector: string): string | undefined {
-  for (const [key, value] of Object.entries(spec)) {
+export function hasTaggedColor(styles: TagStyle[], tag: Tag): boolean {
+  return styles.some(style => {
+    // E.g., "heading,heading1" includes "heading"
+    if (style.tag.toString().includes(tag.toString())) {
+      return style.color !== undefined;
+    }
+
+    return false;
+  });
+}
+
+/**
+ * Find the background or background-color from css styles.
+ */
+export function findBackground(styles: Styles, selector: string): string | undefined {
+  for (const [key, value] of Object.entries(styles)) {
     if (key.includes(selector)) {
       const background: string | undefined = value['background'] ?? value['backgroundColor'];
       if (background !== undefined) {
@@ -84,8 +110,8 @@ function flattenThemes(root: Extension): Theme[] {
 /**
  * Parse CSS rules from CSS text, we only care about background colors.
  */
-function parseCssRules(cssText: string): Spec {
-  const result: Spec = {};
+function parseCssRules(cssText: string): Styles {
+  const result: Styles = {};
   const sheet = new CSSStyleSheet();
   sheet.replaceSync(cssText);
 

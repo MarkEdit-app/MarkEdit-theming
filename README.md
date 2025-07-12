@@ -11,7 +11,7 @@ Add `markedit-theming` to your (TypeScript) project's dependencies:
 ```json
 {
   "dependencies": {
-    "markedit-theming": "https://github.com/MarkEdit-app/MarkEdit-theming#v0.5.0"
+    "markedit-theming": "https://github.com/MarkEdit-app/MarkEdit-theming#v0.6.0"
   }
 }
 ```

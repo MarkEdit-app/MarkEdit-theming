@@ -31,6 +31,14 @@ export interface CustomTheme {
    */
   colors?: {
     /**
+     * If true, syntax like bold, italic, and quote will inherit the editor text color.
+     *
+     * Used in themes that don't define specific colors for bold, italic, or quote syntax, to prevent fallback to unintended default colors.
+     *
+     * @default true
+     */
+    subtleEmphasis?: boolean;
+    /**
      * CSS color string used to override the accent color, it is often what we use for markdown headings.
      *
      * If not provided, a color from the app's main theme will be used.

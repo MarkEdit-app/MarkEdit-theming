@@ -1,4 +1,5 @@
 import { Compartment } from "@codemirror/state";
+import { tags } from "@lezer/highlight";
 import { MarkEdit } from "markedit-api";
 const selectors = {
   selectionBackground: ".cm-selectionBackground",
@@ -7,27 +8,25 @@ const selectors = {
   visibleSpace: ".cm-visibleSpace, .cm-visibleSpace::before, .cm-visibleLineBreak, .cm-visibleLineBreak::before",
   matchingBracket: ".cm-matchingBracket",
   activeIndicator: ".cm-md-activeIndicator",
+  emphasisElement: ".cm-md-bold:not(.tok-meta), .cm-md-italic:not(.tok-meta), .cm-md-quote:not(.cm-md-quoteMark)",
   accentColor: ".cm-md-header:not(.tok-meta):not(.cm-md-quote), .cm-md-codeInfo",
   syntaxMarker: ".cm-md-header.tok-meta:not(.cm-md-quote), .cm-md-codeMark, .cm-md-linkMark, .cm-md-listMark, .cm-md-quoteMark"
 };
 const cssText = `
-  .cm-activeLineGutter {
-    background: inherit !important;
-  }
-  .cm-searchMatch.cm-searchMatch-selected {
-    outline: inherit !important;
-  }
-  .cm-md-bold:not(.tok-meta), .cm-md-italic:not(.tok-meta), .cm-md-quote:not(.cm-md-quoteMark) {
-    color: inherit !important;
-  }
-  ${selectors.lineGutter} {}
-  ${selectors.foldGutter} {}
-  ${selectors.visibleSpace} {}
-  ${selectors.matchingBracket} { box-shadow: unset !important; }
-  ${selectors.activeIndicator} { box-shadow: unset !important; }
-  ${selectors.accentColor} {}
-  ${selectors.syntaxMarker} {}
+.cm-activeLineGutter { background: inherit !important }
+.cm-searchMatch.cm-searchMatch-selected { outline: inherit !important }
+${selectors.lineGutter} {}
+${selectors.foldGutter} {}
+${selectors.visibleSpace} {}
+${selectors.matchingBracket} {}
+${selectors.activeIndicator} {}
+${selectors.emphasisElement} {}
+${selectors.accentColor} {}
+${selectors.syntaxMarker} {}
 `;
+const $global$1 = window;
+const extractStyleRules = $global$1.__extractStyleRules__ ?? ((theme) => theme.value?.rules);
+const extractHighlightSpecs = $global$1.__extractHighlightSpecs__ ?? ((theme) => theme.value?.specs);
 function injectStyles(cssText2) {
   const style = document.createElement("style");
   style.textContent = cssText2;
@@ -36,17 +35,25 @@ function injectStyles(cssText2) {
 }
 function extractTheme(extension) {
   if (extension === void 0) {
-    return {};
+    return [{}, []];
   }
-  return Object.fromEntries(
-    flattenThemes(extension).flatMap((theme) => {
-      const rules = theme.value?.rules?.join("\n") ?? "";
-      return Object.entries(parseCssRules(rules));
-    })
-  );
+  const themes = flattenThemes(extension);
+  const styles = Object.fromEntries(themes.flatMap((theme) => {
+    const rules = extractStyleRules(theme)?.join("\n") ?? "";
+    return Object.entries(parseCssRules(rules));
+  }));
+  return [styles, themes.flatMap((theme) => extractHighlightSpecs(theme) ?? [])];
 }
-function findBackground(spec, selector) {
-  for (const [key, value] of Object.entries(spec)) {
+function hasTaggedColor(styles, tag) {
+  return styles.some((style) => {
+    if (style.tag.toString().includes(tag.toString())) {
+      return style.color !== void 0;
+    }
+    return false;
+  });
+}
+function findBackground(styles, selector) {
+  for (const [key, value] of Object.entries(styles)) {
     if (key.includes(selector)) {
       const background = value["background"] ?? value["backgroundColor"];
       if (background !== void 0) {
@@ -123,17 +130,17 @@ function initContext() {
   };
   MarkEdit.addExtension($context().configurator.of([]));
   MarkEdit.onEditorReady((editor) => updateTheme(editor));
+  const invokeUpdate = () => setTimeout(() => updateTheme(MarkEdit.editorView), 15);
+  $scheme.addEventListener("change", invokeUpdate);
+  $context().mainThemeName = $global.config.theme;
   Object.defineProperty($global.config, "theme", {
     get() {
       return $context().mainThemeName;
     },
     set(value) {
       $context().mainThemeName = value;
-      requestAnimationFrame(() => updateTheme(MarkEdit.editorView));
+      invokeUpdate();
     }
-  });
-  $scheme.addEventListener("change", () => {
-    requestAnimationFrame(() => updateTheme(MarkEdit.editorView));
   });
 }
 function updateTheme(editor) {
@@ -142,23 +149,25 @@ function updateTheme(editor) {
   editor.dispatch({
     effects: $context().configurator.reconfigure(theme?.extension ?? [])
   });
-  const spec = extractTheme(theme?.extension);
-  const disabled = theme === void 0;
-  $context().styleSheet.disabled = disabled;
+  const [cssStyles, tagStyles] = extractTheme(theme?.extension);
+  const isDisabled = theme === void 0;
+  $context().styleSheet.disabled = isDisabled;
   overrideStyles(
     editor,
     isDark,
-    disabled,
-    spec,
+    isDisabled,
+    cssStyles,
+    tagStyles,
     theme?.colors
   );
 }
-function overrideStyles(editor, isDark, isDisabled, spec, colors) {
-  const activeLine = findBackground(spec, ".cm-activeLine");
-  const selectionBackground = findBackground(spec, selectors.selectionBackground);
-  const matchingBracket = findBackground(spec, selectors.matchingBracket);
+function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors) {
+  const activeLine = findBackground(cssStyles, ".cm-activeLine");
+  const selectionBackground = findBackground(cssStyles, selectors.selectionBackground);
+  const matchingBracket = findBackground(cssStyles, selectors.matchingBracket);
   const primaryColor = getComputedStyle(editor.contentDOM).color;
   const secondaryColor = colors?.visibleSpace ?? lighterColor(primaryColor);
+  const useCustomHeader = hasTaggedColor(tagStyles, tags.heading);
   const propertyUpdates = [
     [selectors.activeIndicator, activeLine, "background"],
     [selectors.matchingBracket, matchingBracket, "background"],
@@ -186,7 +195,7 @@ function overrideStyles(editor, isDark, isDisabled, spec, colors) {
           rule.style.setProperty("background", selectionBackground, "important");
         }
       }
-      if (selector === ".cm-md-header" || selector === ".cm-md-header:not(.cm-md-quote)") {
+      if (useCustomHeader && (selector === ".cm-md-header" || selector === ".cm-md-header:not(.cm-md-quote)")) {
         originalRules.markdownHeader ??= rule.cssText;
         if (isDisabled) {
           rule.cssText = originalRules.markdownHeader;
@@ -202,6 +211,16 @@ function overrideStyles(editor, isDark, isDisabled, spec, colors) {
           rule.style.removeProperty(property);
         } else {
           rule.style.setProperty(property, color, "important");
+          if (selector === selectors.matchingBracket || selector === selectors.activeIndicator) {
+            rule.style.setProperty("box-shadow", "unset", "important");
+          }
+        }
+      }
+      if (selector === selectors.emphasisElement) {
+        if (colors?.subtleEmphasis ?? true) {
+          rule.style.setProperty("color", "inherit", "important");
+        } else {
+          rule.style.removeProperty("color");
         }
       }
     }
