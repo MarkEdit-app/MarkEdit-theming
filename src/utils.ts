@@ -42,17 +42,17 @@ export function extractTheme(extension?: Extension): [Styles, TagStyle[]] {
 }
 
 /**
- * Returns true if the tag styles have a certain color defined.
+ * Returns the defined color from tag styles.
  */
-export function hasTaggedColor(styles: TagStyle[], tag: Tag): boolean {
-  return styles.some(style => {
+export function extractTaggedColor(styles: TagStyle[], tag: Tag): string | undefined {
+  return styles.find(style => {
     // E.g., "heading,heading1" includes "heading"
-    if (style.tag.toString().includes(tag.toString())) {
-      return style.color !== undefined;
+    if (style.tag.toString().includes(tag.toString()) && style.color !== undefined) {
+      return true;
     }
 
     return false;
-  });
+  })?.color;
 }
 
 /**

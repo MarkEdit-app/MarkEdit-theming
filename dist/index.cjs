@@ -3,6 +3,172 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
 const state = require("@codemirror/state");
 const highlight = require("@lezer/highlight");
 const markeditApi = require("markedit-api");
+const view = require("@codemirror/view");
+const language = require("@codemirror/language");
+const toObject = (value, fallback = {}) => value ?? fallback;
+const userSettings = toObject(markeditApi.MarkEdit.userSettings);
+const rootValue = toObject(userSettings["extension.markeditTheming"]);
+const enabledMode = rootValue.enabledMode ?? "both";
+const lightColors = toObject(rootValue.lightTheme);
+const darkColors = toObject(rootValue.darkTheme);
+const isModeCustomized = (isDark) => ["both", isDark ? "dark" : "light"].includes(enabledMode);
+const lightTheme = createTheme(lightColors);
+const darkTheme = createTheme(darkColors, { dark: true });
+function createExtensions(isDark, extension) {
+  if (!isModeCustomized(isDark)) {
+    return extension;
+  }
+  const custom = isDark ? darkTheme : lightTheme;
+  if (custom === void 0) {
+    return extension;
+  }
+  return [custom, extension].filter((ext) => ext !== void 0);
+}
+function createColors(isDark, colors) {
+  if (!isModeCustomized(isDark)) {
+    return colors;
+  }
+  const custom = isDark ? darkColors.custom : lightColors.custom;
+  if (custom === void 0) {
+    return colors;
+  }
+  return { ...colors, ...custom };
+}
+function createTheme(colors, options) {
+  const cssStyles = {};
+  const tagStyles = [];
+  const editorColors = colors.editor;
+  const highlightColors = colors.highlight;
+  if (editorColors?.textColor) {
+    cssStyles["&"] ??= {};
+    cssStyles["&"].color = editorColors?.textColor;
+    cssStyles[".cm-activeLineGutter"] = { backgroundColor: editorColors?.textColor };
+  }
+  if (editorColors?.backgroundColor) {
+    cssStyles["&"] ??= {};
+    cssStyles["&"].backgroundColor = editorColors?.backgroundColor;
+  }
+  if (editorColors?.activeLineBackground) {
+    cssStyles[".cm-activeLine"] = { backgroundColor: editorColors?.activeLineBackground };
+  }
+  if (editorColors?.caretColor) {
+    cssStyles[".cm-content"] = { caretColor: editorColors?.caretColor };
+    cssStyles[".cm-cursor, .cm-dropCursor"] = { borderLeftColor: editorColors?.caretColor };
+  }
+  if (editorColors?.selectionBackground) {
+    cssStyles["&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection"] = {
+      backgroundColor: editorColors?.selectionBackground
+    };
+  }
+  if (editorColors?.matchingBracketBackground) {
+    cssStyles["&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket"] = {
+      backgroundColor: editorColors?.matchingBracketBackground
+    };
+  }
+  if (editorColors?.gutterText) {
+    cssStyles[".cm-gutters"] ??= {};
+    cssStyles[".cm-gutters"].color = editorColors?.gutterText;
+  }
+  if (editorColors?.gutterBackground) {
+    cssStyles[".cm-gutters"] ??= {};
+    cssStyles[".cm-gutters"].backgroundColor = editorColors?.gutterBackground;
+    cssStyles[".cm-gutters"].border = "none";
+  }
+  if (editorColors?.foldPlaceholderText) {
+    cssStyles[".cm-foldPlaceholder"] ??= {};
+    cssStyles[".cm-foldPlaceholder"].color = editorColors?.foldPlaceholderText;
+  }
+  if (editorColors?.foldPlaceholderBackground) {
+    cssStyles[".cm-foldPlaceholder"] ??= {};
+    cssStyles[".cm-foldPlaceholder"].backgroundColor = editorColors?.foldPlaceholderBackground;
+    cssStyles[".cm-foldPlaceholder"].border = "none";
+  }
+  if (editorColors?.searchMatchBackground) {
+    cssStyles[".cm-searchMatch"] = { backgroundColor: editorColors?.searchMatchBackground };
+  }
+  if (editorColors?.selectionMatchBackground) {
+    cssStyles[".cm-selectionMatch"] = { backgroundColor: editorColors?.selectionMatchBackground };
+  }
+  if (highlightColors?.heading) {
+    tagStyles.push({ tag: highlight.tags.heading, color: highlightColors?.heading });
+  }
+  if (highlightColors?.bold) {
+    tagStyles.push({ tag: highlight.tags.strong, color: highlightColors?.bold });
+  }
+  if (highlightColors?.italic) {
+    tagStyles.push({ tag: highlight.tags.emphasis, color: highlightColors?.italic });
+  }
+  if (highlightColors?.strikethrough) {
+    tagStyles.push({ tag: highlight.tags.strikethrough, color: highlightColors?.strikethrough });
+  }
+  if (highlightColors?.quote) {
+    tagStyles.push({ tag: highlight.tags.quote, color: highlightColors?.quote });
+  }
+  if (highlightColors?.link) {
+    tagStyles.push({ tag: highlight.tags.link, color: highlightColors?.link });
+  }
+  if (highlightColors?.separator) {
+    tagStyles.push({ tag: [highlight.tags.definition(highlight.tags.name), highlight.tags.separator, highlight.tags.contentSeparator], color: highlightColors?.separator });
+  }
+  if (highlightColors?.comment) {
+    tagStyles.push({ tag: [highlight.tags.meta, highlight.tags.comment], color: highlightColors?.comment });
+  }
+  if (highlightColors?.meta) {
+    tagStyles.push({ tag: highlight.tags.meta, color: highlightColors?.meta });
+  }
+  if (highlightColors?.keyword) {
+    tagStyles.push({ tag: highlight.tags.keyword, color: highlightColors?.keyword });
+  }
+  if (highlightColors?.atom) {
+    tagStyles.push({ tag: [highlight.tags.atom, highlight.tags.bool, highlight.tags.url, highlight.tags.contentSeparator, highlight.tags.labelName], color: highlightColors?.atom });
+  }
+  if (highlightColors?.literal) {
+    tagStyles.push({ tag: [highlight.tags.literal, highlight.tags.inserted], color: highlightColors?.literal });
+  }
+  if (highlightColors?.string) {
+    tagStyles.push({ tag: [highlight.tags.string, highlight.tags.deleted], color: highlightColors?.string });
+  }
+  if (highlightColors?.special) {
+    tagStyles.push({ tag: [highlight.tags.regexp, highlight.tags.escape, highlight.tags.special(highlight.tags.string)], color: highlightColors?.special });
+  }
+  if (highlightColors?.variable) {
+    tagStyles.push({ tag: highlight.tags.definition(highlight.tags.variableName), color: highlightColors?.variable });
+  }
+  if (highlightColors?.local) {
+    tagStyles.push({ tag: highlight.tags.local(highlight.tags.variableName), color: highlightColors?.local });
+  }
+  if (highlightColors?.type) {
+    tagStyles.push({ tag: [highlight.tags.typeName, highlight.tags.namespace], color: highlightColors?.type });
+  }
+  if (highlightColors?.class) {
+    tagStyles.push({ tag: highlight.tags.className, color: highlightColors?.class });
+  }
+  if (highlightColors?.macro) {
+    tagStyles.push({ tag: [highlight.tags.special(highlight.tags.variableName), highlight.tags.macroName], color: highlightColors?.macro });
+  }
+  if (highlightColors?.property) {
+    tagStyles.push({ tag: highlight.tags.definition(highlight.tags.propertyName), color: highlightColors?.property });
+  }
+  if (highlightColors?.label) {
+    tagStyles.push({ tag: highlight.tags.labelName, color: highlightColors?.label });
+  }
+  if (highlightColors?.operator) {
+    tagStyles.push({ tag: [highlight.tags.operator, highlight.tags.operatorKeyword], color: highlightColors?.operator });
+  }
+  if (highlightColors?.constant) {
+    tagStyles.push({ tag: [highlight.tags.color, highlight.tags.constant(highlight.tags.name), highlight.tags.standard(highlight.tags.name)], color: highlightColors?.constant });
+  }
+  if (highlightColors?.instruction) {
+    tagStyles.push({ tag: highlight.tags.processingInstruction, color: highlightColors?.instruction });
+  }
+  if (highlightColors?.invalid) {
+    tagStyles.push({ tag: highlight.tags.invalid, color: highlightColors?.invalid });
+  }
+  return [
+    view.EditorView.theme(cssStyles, options),
+    language.syntaxHighlighting(language.HighlightStyle.define(tagStyles))
+  ];
+}
 const selectors = {
   selectionBackground: ".cm-selectionBackground",
   lineGutter: ".cm-lineNumbers > .cm-activeLineGutter",
@@ -46,13 +212,13 @@ function extractTheme(extension) {
   }));
   return [styles, themes.flatMap((theme) => extractHighlightSpecs(theme) ?? [])];
 }
-function hasTaggedColor(styles, tag) {
-  return styles.some((style) => {
-    if (style.tag.toString().includes(tag.toString())) {
-      return style.color !== void 0;
+function extractTaggedColor(styles, tag) {
+  return styles.find((style) => {
+    if (style.tag.toString().includes(tag.toString()) && style.color !== void 0) {
+      return true;
     }
     return false;
-  });
+  })?.color;
 }
 function findBackground(styles, selector, exclude) {
   for (const [key, value] of Object.entries(styles)) {
@@ -148,11 +314,13 @@ function initContext() {
 function updateTheme(editor) {
   const isDark = $scheme.matches;
   const theme = isDark ? $context().customThemes.dark : $context().customThemes.light;
+  const extensions = createExtensions(isDark, theme?.extension);
+  const colors = createColors(isDark, theme?.colors);
   editor.dispatch({
-    effects: $context().configurator.reconfigure(theme?.extension ?? [])
+    effects: $context().configurator.reconfigure(extensions ?? [])
   });
-  const [cssStyles, tagStyles] = extractTheme(theme?.extension);
-  const isDisabled = theme === void 0;
+  const [cssStyles, tagStyles] = extractTheme(extensions);
+  const isDisabled = extensions === void 0;
   $context().styleSheet.disabled = isDisabled;
   overrideStyles(
     editor,
@@ -160,7 +328,7 @@ function updateTheme(editor) {
     isDisabled,
     cssStyles,
     tagStyles,
-    theme?.colors
+    colors
   );
 }
 function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors) {
@@ -169,7 +337,8 @@ function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors
   const matchingBracket = findBackground(cssStyles, selectors.matchingBracket);
   const primaryColor = getComputedStyle(editor.contentDOM).color;
   const secondaryColor = colors?.visibleSpace ?? lighterColor(primaryColor);
-  const useCustomHeader = hasTaggedColor(tagStyles, highlight.tags.heading);
+  const useCustomHeader = extractTaggedColor(tagStyles, highlight.tags.heading) !== void 0;
+  const instructionTagColor = extractTaggedColor(tagStyles, highlight.tags.processingInstruction);
   const propertyUpdates = [
     [selectors.activeIndicator, activeLine, "background"],
     [selectors.matchingBracket, matchingBracket, "background"],
@@ -177,7 +346,7 @@ function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors
     [selectors.foldGutter, secondaryColor, "color"],
     [selectors.visibleSpace, secondaryColor, "color"],
     [selectors.accentColor, colors?.accentColor, "color"],
-    [selectors.syntaxMarker, colors?.syntaxMarker, "color"]
+    [selectors.syntaxMarker, instructionTagColor ?? colors?.syntaxMarker, "color"]
   ];
   const styles = Array.from(document.querySelectorAll("style"));
   const originalRules = isDark ? $context().darkOriginalRules : $context().lightOriginalRules;

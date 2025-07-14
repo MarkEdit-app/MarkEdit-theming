@@ -11,5 +11,5 @@
     "declarationDir": "dist",
     "outDir": "dist"
   },
-  "include": ["index.ts", "src"]
+  "include": ["index.ts", "colors.ts", "src"]
 }

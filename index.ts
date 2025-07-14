@@ -1,11 +1,13 @@
 import { Compartment, type Extension } from '@codemirror/state';
 import { tags } from '@lezer/highlight';
 import { MarkEdit } from 'markedit-api';
+import { createExtensions, createColors } from './src/builder';
 import { selectors, cssText } from './src/const';
-import { injectStyles, extractTheme, hasTaggedColor, findBackground, lighterColor } from './src/utils';
+import { injectStyles, extractTheme, extractTaggedColor, findBackground, lighterColor } from './src/utils';
 
 import type { EditorView } from '@codemirror/view';
 import type { TagStyle } from '@codemirror/language';
+import type { Colors } from './colors';
 import type { OriginalRules } from './src/types';
 
 /**
@@ -44,36 +46,9 @@ export interface CustomTheme {
    */
   extension?: Extension;
   /**
-   * The colors used to override certain elements.
+   * The colors used to customize certain elements.
    */
-  colors?: {
-    /**
-     * If true, syntax like bold, italic, and quote will inherit the editor text color.
-     *
-     * Used in themes that don't define specific colors for bold, italic, or quote syntax, to prevent fallback to unintended default colors.
-     *
-     * @default true
-     */
-    subtleEmphasis?: boolean;
-    /**
-     * CSS color string used to override the accent color, it is often what we use for markdown headings.
-     *
-     * If not provided, a color from the app's main theme will be used.
-     */
-    accentColor?: string;
-    /**
-     * CSS color string used to override the color of syntax markers, such as for list, link, quote, etc.
-     *
-     * If not provided, a color from the app's main theme will be used.
-     */
-    syntaxMarker?: string;
-    /**
-     * CSS color string used to override the color of visible whitespaces.
-     *
-     * If not provided, it will be automatically generated from the text color.
-     */
-    visibleSpace?: string;
-  };
+  colors?: Colors['custom'];
 }
 
 // MARK: - Private
@@ -140,15 +115,17 @@ function initContext() {
 function updateTheme(editor: EditorView) {
   const isDark = $scheme.matches;
   const theme = isDark ? $context().customThemes.dark : $context().customThemes.light;
+  const extensions = createExtensions(isDark, theme?.extension);
+  const colors = createColors(isDark, theme?.colors);
 
   // Reconfigure the extension
   editor.dispatch({
-    effects: $context().configurator.reconfigure(theme?.extension ?? []),
+    effects: $context().configurator.reconfigure(extensions ?? []),
   });
 
   // Get the css styles and tag styles from the used EditorView.theme
-  const [cssStyles, tagStyles] = extractTheme(theme?.extension);
-  const isDisabled = theme === undefined;
+  const [cssStyles, tagStyles] = extractTheme(extensions);
+  const isDisabled = extensions === undefined;
 
   // Reconfigure the style sheets
   $context().styleSheet.disabled = isDisabled;
@@ -158,7 +135,7 @@ function updateTheme(editor: EditorView) {
     isDisabled,
     cssStyles,
     tagStyles,
-    theme?.colors,
+    colors,
   );
 }
 
@@ -178,7 +155,8 @@ function overrideStyles(
   const matchingBracket = findBackground(cssStyles, selectors.matchingBracket);
   const primaryColor = getComputedStyle(editor.contentDOM).color;
   const secondaryColor = colors?.visibleSpace ?? lighterColor(primaryColor);
-  const useCustomHeader = hasTaggedColor(tagStyles, tags.heading);
+  const useCustomHeader = extractTaggedColor(tagStyles, tags.heading) !== undefined;
+  const instructionTagColor = extractTaggedColor(tagStyles, tags.processingInstruction);
 
   const propertyUpdates: [string, string | undefined, 'background' | 'color'][] = [
     [selectors.activeIndicator, activeLine, 'background'],
@@ -187,7 +165,7 @@ function overrideStyles(
     [selectors.foldGutter, secondaryColor, 'color'],
     [selectors.visibleSpace, secondaryColor, 'color'],
     [selectors.accentColor, colors?.accentColor, 'color'],
-    [selectors.syntaxMarker, colors?.syntaxMarker, 'color'],
+    [selectors.syntaxMarker, instructionTagColor ?? colors?.syntaxMarker, 'color'],
   ];
 
   const styles = Array.from(document.querySelectorAll('style'));

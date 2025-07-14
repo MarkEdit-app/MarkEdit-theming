@@ -3,7 +3,7 @@ import parserTs from '@typescript-eslint/parser';
 
 export default [
   {
-    files: ['index.ts', 'src/**/*.ts'],
+    files: ['index.ts', 'colors.ts', 'src/**/*.ts'],
     languageOptions: {
       parser: parserTs,
       parserOptions: {

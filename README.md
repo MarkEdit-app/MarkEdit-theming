@@ -11,7 +11,7 @@ Add `markedit-theming` to your (TypeScript) project's dependencies:
 ```json
 {
   "dependencies": {
-    "markedit-theming": "https://github.com/MarkEdit-app/MarkEdit-theming#v0.7.0"
+    "markedit-theming": "https://github.com/MarkEdit-app/MarkEdit-theming#v0.8.0"
   }
 }
 ```
@@ -28,6 +28,10 @@ overrideThemes({
 ```
 
 This package is fully typed and documented, see [index.d.ts](/dist/index.d.ts) for details.
+
+## User Customization
+
+Themes built with this package provide a way for user to customize colors, see the [wiki](https://github.com/MarkEdit-app/MarkEdit-theming/wiki#customization) for details.
 
 ## Community CodeMirror Themes
 

@@ -9,7 +9,7 @@ const commands = [
   // Remove types that are supposed to be used internally
   'rm -rf ./dist/src',
   // Re-format the output
-  'npx prettier --write "dist/index.d.ts"',
+  'npx prettier --write "dist/*.d.ts"',
 ];
 
 execSync(commands.join(' && '));
