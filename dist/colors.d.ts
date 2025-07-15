@@ -56,7 +56,9 @@ export interface Colors {
     selectionMatchBackground?: string;
   };
   /**
-   * Colors for syntax Highlighting, see [highlight.Tag](https://lezer.codemirror.net/docs/ref/#highlight.Tag) for details.
+   * Colors for syntax highlighting, based on lezer's [highlight.Tag](https://lezer.codemirror.net/docs/ref/#highlight.Tag).
+   *
+   * Tag names have been simplified for greater consistency.
    */
   highlight?: {
     heading?: string;

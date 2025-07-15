@@ -155,7 +155,7 @@ function overrideStyles(
   const matchingBracket = findBackground(cssStyles, selectors.matchingBracket);
   const primaryColor = getComputedStyle(editor.contentDOM).color;
   const secondaryColor = colors?.visibleSpace ?? lighterColor(primaryColor);
-  const useCustomHeader = extractTaggedColor(tagStyles, tags.heading) !== undefined;
+  const headingTagColor = extractTaggedColor(tagStyles, tags.heading);
   const instructionTagColor = extractTaggedColor(tagStyles, tags.processingInstruction);
 
   const propertyUpdates: [string, string | undefined, 'background' | 'color'][] = [
@@ -164,8 +164,8 @@ function overrideStyles(
     [selectors.lineGutter, primaryColor, 'color'],
     [selectors.foldGutter, secondaryColor, 'color'],
     [selectors.visibleSpace, secondaryColor, 'color'],
-    [selectors.accentColor, colors?.accentColor, 'color'],
-    [selectors.syntaxMarker, instructionTagColor ?? colors?.syntaxMarker, 'color'],
+    [selectors.accentColor, colors?.accentColor ?? headingTagColor, 'color'],
+    [selectors.syntaxMarker, colors?.syntaxMarker ?? instructionTagColor, 'color'],
   ];
 
   const styles = Array.from(document.querySelectorAll('style'));
@@ -192,7 +192,7 @@ function overrideStyles(
       }
 
       // Markdown headings
-      if (useCustomHeader && (selector === '.cm-md-header' || selector === '.cm-md-header:not(.cm-md-quote)')) {
+      if (headingTagColor !== undefined && (selector === '.cm-md-header' || selector === '.cm-md-header:not(.cm-md-quote)')) {
         originalRules.markdownHeader ??= rule.cssText;
         if (isDisabled) {
           rule.cssText = originalRules.markdownHeader;
@@ -210,7 +210,8 @@ function overrideStyles(
         if (color === undefined) {
           rule.style.removeProperty(property);
         } else {
-          rule.style.setProperty(property, color, 'important');
+          const priority = [selectors.accentColor, selectors.syntaxMarker].includes(selector) ? undefined : 'important';
+          rule.style.setProperty(property, color, priority);
 
           // Remove the special styling in MarkEdit when colors are provided
           if (selector === selectors.matchingBracket || selector === selectors.activeIndicator) {

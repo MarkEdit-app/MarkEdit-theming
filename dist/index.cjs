@@ -105,13 +105,13 @@ function createTheme(colors, options) {
     tagStyles.push({ tag: highlight.tags.quote, color: highlightColors?.quote });
   }
   if (highlightColors?.link) {
-    tagStyles.push({ tag: highlight.tags.link, color: highlightColors?.link });
+    tagStyles.push({ tag: [highlight.tags.url, highlight.tags.link], color: highlightColors?.link });
   }
   if (highlightColors?.separator) {
     tagStyles.push({ tag: [highlight.tags.definition(highlight.tags.name), highlight.tags.separator, highlight.tags.contentSeparator], color: highlightColors?.separator });
   }
   if (highlightColors?.comment) {
-    tagStyles.push({ tag: [highlight.tags.meta, highlight.tags.comment], color: highlightColors?.comment });
+    tagStyles.push({ tag: highlight.tags.comment, color: highlightColors?.comment });
   }
   if (highlightColors?.meta) {
     tagStyles.push({ tag: highlight.tags.meta, color: highlightColors?.meta });
@@ -120,7 +120,7 @@ function createTheme(colors, options) {
     tagStyles.push({ tag: highlight.tags.keyword, color: highlightColors?.keyword });
   }
   if (highlightColors?.atom) {
-    tagStyles.push({ tag: [highlight.tags.atom, highlight.tags.bool, highlight.tags.url, highlight.tags.contentSeparator, highlight.tags.labelName], color: highlightColors?.atom });
+    tagStyles.push({ tag: [highlight.tags.atom, highlight.tags.bool], color: highlightColors?.atom });
   }
   if (highlightColors?.literal) {
     tagStyles.push({ tag: [highlight.tags.literal, highlight.tags.inserted], color: highlightColors?.literal });
@@ -239,20 +239,14 @@ function lighterColor(textColor) {
   const [red, green, blue] = components.slice(1, 4).map(Number);
   return `rgba(${red}, ${green}, ${blue}, 0.6)`;
 }
-function flattenThemes(root) {
-  const result = [];
-  const stack = [root];
-  while (stack.length > 0) {
-    const node = stack.pop();
-    if (Array.isArray(node)) {
-      node.forEach((o) => stack.push(o));
-    } else if ("extension" in node) {
-      stack.push(node.extension);
-    } else {
-      result.push(node);
-    }
+function flattenThemes(node) {
+  if (Array.isArray(node)) {
+    return node.flatMap(flattenThemes);
+  } else if ("extension" in node) {
+    return flattenThemes(node.extension);
+  } else {
+    return [node];
   }
-  return result;
 }
 function parseCssRules(cssText2) {
   const result = {};
@@ -337,7 +331,7 @@ function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors
   const matchingBracket = findBackground(cssStyles, selectors.matchingBracket);
   const primaryColor = getComputedStyle(editor.contentDOM).color;
   const secondaryColor = colors?.visibleSpace ?? lighterColor(primaryColor);
-  const useCustomHeader = extractTaggedColor(tagStyles, highlight.tags.heading) !== void 0;
+  const headingTagColor = extractTaggedColor(tagStyles, highlight.tags.heading);
   const instructionTagColor = extractTaggedColor(tagStyles, highlight.tags.processingInstruction);
   const propertyUpdates = [
     [selectors.activeIndicator, activeLine, "background"],
@@ -345,8 +339,8 @@ function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors
     [selectors.lineGutter, primaryColor, "color"],
     [selectors.foldGutter, secondaryColor, "color"],
     [selectors.visibleSpace, secondaryColor, "color"],
-    [selectors.accentColor, colors?.accentColor, "color"],
-    [selectors.syntaxMarker, instructionTagColor ?? colors?.syntaxMarker, "color"]
+    [selectors.accentColor, colors?.accentColor ?? headingTagColor, "color"],
+    [selectors.syntaxMarker, colors?.syntaxMarker ?? instructionTagColor, "color"]
   ];
   const styles = Array.from(document.querySelectorAll("style"));
   const originalRules = isDark ? $context().darkOriginalRules : $context().lightOriginalRules;
@@ -366,7 +360,7 @@ function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors
           rule.style.setProperty("background", selectionBackground, "important");
         }
       }
-      if (useCustomHeader && (selector === ".cm-md-header" || selector === ".cm-md-header:not(.cm-md-quote)")) {
+      if (headingTagColor !== void 0 && (selector === ".cm-md-header" || selector === ".cm-md-header:not(.cm-md-quote)")) {
         originalRules.markdownHeader ??= rule.cssText;
         if (isDisabled) {
           rule.cssText = originalRules.markdownHeader;
@@ -381,7 +375,8 @@ function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors
         if (color === void 0) {
           rule.style.removeProperty(property);
         } else {
-          rule.style.setProperty(property, color, "important");
+          const priority = [selectors.accentColor, selectors.syntaxMarker].includes(selector) ? void 0 : "important";
+          rule.style.setProperty(property, color, priority);
           if (selector === selectors.matchingBracket || selector === selectors.activeIndicator) {
             rule.style.setProperty("box-shadow", "unset", "important");
           }

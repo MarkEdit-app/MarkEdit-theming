@@ -89,22 +89,14 @@ export function lighterColor(textColor: string): string | undefined {
 /**
  * Get flattened themes, since CodeMirror Extension is recursively declared.
  */
-function flattenThemes(root: Extension): Theme[] {
-  const result: Theme[] = [];
-  const stack: Extension[] = [root];
-
-  while (stack.length > 0) {
-    const node = stack.pop()!;
-    if (Array.isArray(node)) {
-      node.forEach(o => stack.push(o));
-    } else if ('extension' in node) {
-      stack.push(node.extension);
-    } else {
-      result.push(node);
-    }
+function flattenThemes(node: Extension): Extension[] {
+  if (Array.isArray(node)) {
+    return node.flatMap(flattenThemes);
+  } else if ('extension' in node) {
+    return flattenThemes(node.extension);
+  } else {
+    return [node];
   }
-
-  return result;
 }
 
 /**

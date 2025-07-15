@@ -131,7 +131,7 @@ function createTheme(colors: Colors, options?: { dark?: boolean }) {
   }
 
   if (highlightColors?.link) {
-    tagStyles.push({ tag: tags.link, color: highlightColors?.link });
+    tagStyles.push({ tag: [tags.url, tags.link], color: highlightColors?.link });
   }
 
   if (highlightColors?.separator) {
@@ -139,7 +139,7 @@ function createTheme(colors: Colors, options?: { dark?: boolean }) {
   }
 
   if (highlightColors?.comment) {
-    tagStyles.push({ tag: [tags.meta, tags.comment], color: highlightColors?.comment });
+    tagStyles.push({ tag: tags.comment, color: highlightColors?.comment });
   }
 
   // General Syntax
@@ -153,7 +153,7 @@ function createTheme(colors: Colors, options?: { dark?: boolean }) {
   }
 
   if (highlightColors?.atom) {
-    tagStyles.push({ tag: [tags.atom, tags.bool, tags.url, tags.contentSeparator, tags.labelName], color: highlightColors?.atom });
+    tagStyles.push({ tag: [tags.atom, tags.bool], color: highlightColors?.atom });
   }
 
   if (highlightColors?.literal) {
