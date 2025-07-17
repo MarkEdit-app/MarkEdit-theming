@@ -10,27 +10,17 @@ const enabledMode = rootValue.enabledMode ?? "both";
 const lightColors = toObject(rootValue.lightTheme);
 const darkColors = toObject(rootValue.darkTheme);
 const isModeCustomized = (isDark) => ["both", isDark ? "dark" : "light"].includes(enabledMode);
-const lightTheme = createTheme(lightColors);
-const darkTheme = createTheme(darkColors, { dark: true });
-function createExtensions(isDark, extension) {
-  if (!isModeCustomized(isDark)) {
-    return extension;
-  }
-  const custom = isDark ? darkTheme : lightTheme;
-  if (custom === void 0) {
-    return extension;
-  }
-  return [custom, extension].filter((ext) => ext !== void 0);
-}
-function createColors(isDark, colors) {
-  if (!isModeCustomized(isDark)) {
-    return colors;
-  }
-  const custom = isDark ? darkColors.custom : lightColors.custom;
-  if (custom === void 0) {
-    return colors;
-  }
-  return { ...colors, ...custom };
+function buildBlendedTheme(isDark, extension, colors) {
+  const mergedColors = mergeColors({
+    lhs: colors,
+    rhs: isModeCustomized(isDark) ? isDark ? darkColors : lightColors : void 0
+  });
+  const custom = isDark ? createTheme(mergedColors, { dark: true }) : createTheme(mergedColors);
+  return {
+    // In CodeMirror, extensions added earlier have higher priority
+    extensions: [...custom, extension].filter((ext) => ext !== void 0),
+    colors: mergedColors
+  };
 }
 function createTheme(colors, options) {
   const cssStyles = {};
@@ -162,10 +152,27 @@ function createTheme(colors, options) {
   if (highlightColors?.invalid) {
     tagStyles.push({ tag: tags.invalid, color: highlightColors?.invalid });
   }
-  return [
-    EditorView.theme(cssStyles, options),
-    syntaxHighlighting(HighlightStyle.define(tagStyles))
-  ];
+  const extensions = [];
+  if (Object.keys(cssStyles).length > 0) {
+    extensions.push(EditorView.theme(cssStyles, options));
+  }
+  if (tagStyles.length > 0) {
+    extensions.push(syntaxHighlighting(HighlightStyle.define(tagStyles)));
+  }
+  return extensions;
+}
+function mergeColors(colors) {
+  return {
+    editor: {
+      ...colors.lhs?.editor,
+      ...colors.rhs?.editor
+    },
+    highlight: {
+      ...colors.lhs?.highlight,
+      ...colors.rhs?.highlight
+    },
+    subtleEmphasis: colors.rhs?.subtleEmphasis ?? colors.lhs?.subtleEmphasis
+  };
 }
 const selectors = {
   selectionBackground: ".cm-selectionBackground",
@@ -200,7 +207,7 @@ function injectStyles(cssText2) {
   return style;
 }
 function extractTheme(extension) {
-  if (extension === void 0) {
+  if (extension.length === 0) {
     return [{}, []];
   }
   const themes = flattenThemes(extension);
@@ -236,6 +243,24 @@ function lighterColor(textColor) {
   }
   const [red, green, blue] = components.slice(1, 4).map(Number);
   return `rgba(${red}, ${green}, ${blue}, 0.6)`;
+}
+function isEmptyObject(object) {
+  const isValid = (value) => value !== null && typeof value === "object";
+  if (!isValid(object)) {
+    return true;
+  }
+  const entries = Object.entries(object);
+  const hasValue = (value) => value !== void 0 && value !== null;
+  for (const [, value] of entries) {
+    if (isValid(value)) {
+      if (!isEmptyObject(value)) {
+        return false;
+      }
+    } else if (hasValue(value)) {
+      return false;
+    }
+  }
+  return true;
 }
 function flattenThemes(node) {
   if (Array.isArray(node)) {
@@ -306,13 +331,12 @@ function initContext() {
 function updateTheme(editor) {
   const isDark = $scheme.matches;
   const theme = isDark ? $context().customThemes.dark : $context().customThemes.light;
-  const extensions = createExtensions(isDark, theme?.extension);
-  const colors = createColors(isDark, theme?.colors);
+  const { extensions, colors } = buildBlendedTheme(isDark, theme?.extension, theme?.colors);
   editor.dispatch({
-    effects: $context().configurator.reconfigure(extensions ?? [])
+    effects: $context().configurator.reconfigure(extensions)
   });
   const [cssStyles, tagStyles] = extractTheme(extensions);
-  const isDisabled = extensions === void 0;
+  const isDisabled = extensions.length === 0 && isEmptyObject(colors);
   $context().styleSheet.disabled = isDisabled;
   overrideStyles(
     editor,
@@ -328,7 +352,7 @@ function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors
   const selectionBackground = findBackground(cssStyles, selectors.selectionBackground);
   const matchingBracket = findBackground(cssStyles, selectors.matchingBracket);
   const primaryColor = getComputedStyle(editor.contentDOM).color;
-  const secondaryColor = colors?.visibleSpace ?? lighterColor(primaryColor);
+  const secondaryColor = colors.editor?.visibleSpaceColor ?? lighterColor(primaryColor);
   const headingTagColor = extractTaggedColor(tagStyles, tags.heading);
   const instructionTagColor = extractTaggedColor(tagStyles, tags.processingInstruction);
   const propertyUpdates = [
@@ -337,8 +361,8 @@ function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors
     [selectors.lineGutter, primaryColor, "color"],
     [selectors.foldGutter, secondaryColor, "color"],
     [selectors.visibleSpace, secondaryColor, "color"],
-    [selectors.accentColor, colors?.accentColor ?? headingTagColor, "color"],
-    [selectors.syntaxMarker, colors?.syntaxMarker ?? instructionTagColor, "color"]
+    [selectors.accentColor, headingTagColor, "color"],
+    [selectors.syntaxMarker, instructionTagColor, "color"]
   ];
   const styles = Array.from(document.querySelectorAll("style"));
   const originalRules = isDark ? $context().darkOriginalRules : $context().lightOriginalRules;
@@ -381,7 +405,7 @@ function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors
         }
       }
       if (selector === selectors.emphasisElement) {
-        if (colors?.subtleEmphasis ?? true) {
+        if (colors.subtleEmphasis ?? true) {
           rule.style.setProperty("color", "inherit", "important");
         } else {
           rule.style.removeProperty("color");

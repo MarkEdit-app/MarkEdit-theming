@@ -28,7 +28,7 @@ export interface CustomTheme {
    */
   extension?: Extension;
   /**
-   * The colors used to customize certain elements.
+   * The colors for editor theme, syntax highlighting, etc.
    */
-  colors?: Colors['custom'];
+  colors?: Colors;
 }

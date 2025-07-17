@@ -7,33 +7,19 @@ import type { Extension } from '@codemirror/state';
 import type { StyleSpec } from 'style-mod';
 import type { Colors } from '../colors';
 
-const lightTheme = createTheme(lightColors);
-const darkTheme = createTheme(darkColors, { dark: true });
+export function buildBlendedTheme(isDark: boolean, extension?: Extension, colors?: Colors) {
+  // In a JS object, values that are spread later have higher priority
+  const mergedColors = mergeColors({
+    lhs: colors,
+    rhs: isModeCustomized(isDark) ? (isDark ? darkColors : lightColors) : undefined,
+  });
 
-export function createExtensions(isDark: boolean, extension?: Extension) {
-  if (!isModeCustomized(isDark)) {
-    return extension;
-  }
-
-  const custom = isDark ? darkTheme : lightTheme;
-  if (custom === undefined) {
-    return extension;
-  }
-
-  return [custom, extension].filter(ext => ext !== undefined);
-}
-
-export function createColors(isDark: boolean, colors?: Colors['custom']) {
-  if (!isModeCustomized(isDark)) {
-    return colors;
-  }
-
-  const custom = isDark ? darkColors.custom : lightColors.custom;
-  if (custom === undefined) {
-    return colors;
-  }
-
-  return { ...colors, ...custom };
+  const custom = isDark ? createTheme(mergedColors, { dark: true }) : createTheme(mergedColors);
+  return {
+    // In CodeMirror, extensions added earlier have higher priority
+    extensions: [...custom, extension].filter(ext => ext !== undefined),
+    colors: mergedColors,
+  };
 }
 
 // MARK: - Private
@@ -212,8 +198,28 @@ function createTheme(colors: Colors, options?: { dark?: boolean }) {
     tagStyles.push({ tag: tags.invalid, color: highlightColors?.invalid });
   }
 
-  return [
-    EditorView.theme(cssStyles, options),
-    syntaxHighlighting(HighlightStyle.define(tagStyles)),
-  ];
+  const extensions: Extension[] = [];
+  if (Object.keys(cssStyles).length > 0) {
+    extensions.push(EditorView.theme(cssStyles, options));
+  }
+
+  if (tagStyles.length > 0) {
+    extensions.push(syntaxHighlighting(HighlightStyle.define(tagStyles)));
+  }
+
+  return extensions;
+}
+
+function mergeColors(colors: { lhs?: Colors, rhs?: Colors }): Colors {
+  return {
+    editor: {
+      ...colors.lhs?.editor,
+      ...colors.rhs?.editor,
+    },
+    highlight: {
+      ...colors.lhs?.highlight,
+      ...colors.rhs?.highlight,
+    },
+    subtleEmphasis: colors.rhs?.subtleEmphasis ?? colors.lhs?.subtleEmphasis,
+  };
 }

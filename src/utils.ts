@@ -27,8 +27,8 @@ export function injectStyles(cssText: string): HTMLStyleElement {
 /**
  * Returns the extracted from a CodeMirror theme, including its css styles and tag styles.
  */
-export function extractTheme(extension?: Extension): [Styles, TagStyle[]] {
-  if (extension === undefined) {
+export function extractTheme(extension: Extension[]): [Styles, TagStyle[]] {
+  if (extension.length === 0) {
     return [{}, []];
   }
 
@@ -82,6 +82,30 @@ export function lighterColor(textColor: string): string | undefined {
 
   const [red, green, blue] = components.slice(1, 4).map(Number);
   return `rgba(${red}, ${green}, ${blue}, 0.6)`;
+}
+
+/**
+ * Returns true when the object has no valid values other than just empty objects.
+ */
+export function isEmptyObject(object: unknown): boolean {
+  const isValid = (value: unknown) => value !== null && typeof value === 'object';
+  if (!isValid(object)) {
+    return true;
+  }
+
+  const entries = Object.entries(object as Record<string, unknown>);
+  const hasValue = (value: unknown) => value !== undefined && value !== null;
+  for (const [, value] of entries) {
+    if (isValid(value)) {
+      if (!isEmptyObject(value)) {
+        return false;
+      }
+    } else if (hasValue(value)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 // MARK: - Private

@@ -1,9 +1,9 @@
 import { Compartment, type Extension } from '@codemirror/state';
 import { tags } from '@lezer/highlight';
 import { MarkEdit } from 'markedit-api';
-import { createExtensions, createColors } from './src/builder';
+import { buildBlendedTheme } from './src/builder';
 import { selectors, cssText } from './src/const';
-import { injectStyles, extractTheme, extractTaggedColor, findBackground, lighterColor } from './src/utils';
+import { injectStyles, extractTheme, extractTaggedColor, findBackground, lighterColor, isEmptyObject } from './src/utils';
 
 import type { EditorView } from '@codemirror/view';
 import type { TagStyle } from '@codemirror/language';
@@ -46,9 +46,9 @@ export interface CustomTheme {
    */
   extension?: Extension;
   /**
-   * The colors used to customize certain elements.
+   * The colors for editor theme, syntax highlighting, etc.
    */
-  colors?: Colors['custom'];
+  colors?: Colors;
 }
 
 // MARK: - Private
@@ -115,17 +115,16 @@ function initContext() {
 function updateTheme(editor: EditorView) {
   const isDark = $scheme.matches;
   const theme = isDark ? $context().customThemes.dark : $context().customThemes.light;
-  const extensions = createExtensions(isDark, theme?.extension);
-  const colors = createColors(isDark, theme?.colors);
+  const { extensions, colors } = buildBlendedTheme(isDark, theme?.extension, theme?.colors);
 
   // Reconfigure the extension
   editor.dispatch({
-    effects: $context().configurator.reconfigure(extensions ?? []),
+    effects: $context().configurator.reconfigure(extensions),
   });
 
   // Get the css styles and tag styles from the used EditorView.theme
   const [cssStyles, tagStyles] = extractTheme(extensions);
-  const isDisabled = extensions === undefined;
+  const isDisabled = extensions.length === 0 && isEmptyObject(colors);
 
   // Reconfigure the style sheets
   $context().styleSheet.disabled = isDisabled;
@@ -148,13 +147,13 @@ function overrideStyles(
   isDisabled: boolean,
   cssStyles: Record<string, Record<string, string>>,
   tagStyles: TagStyle[],
-  colors?: CustomTheme['colors'],
+  colors: Colors,
 ) {
   const activeLine = findBackground(cssStyles, '.cm-activeLine', '.cm-activeLineGutter');
   const selectionBackground = findBackground(cssStyles, selectors.selectionBackground);
   const matchingBracket = findBackground(cssStyles, selectors.matchingBracket);
   const primaryColor = getComputedStyle(editor.contentDOM).color;
-  const secondaryColor = colors?.visibleSpace ?? lighterColor(primaryColor);
+  const secondaryColor = colors.editor?.visibleSpaceColor ?? lighterColor(primaryColor);
   const headingTagColor = extractTaggedColor(tagStyles, tags.heading);
   const instructionTagColor = extractTaggedColor(tagStyles, tags.processingInstruction);
 
@@ -164,8 +163,8 @@ function overrideStyles(
     [selectors.lineGutter, primaryColor, 'color'],
     [selectors.foldGutter, secondaryColor, 'color'],
     [selectors.visibleSpace, secondaryColor, 'color'],
-    [selectors.accentColor, colors?.accentColor ?? headingTagColor, 'color'],
-    [selectors.syntaxMarker, colors?.syntaxMarker ?? instructionTagColor, 'color'],
+    [selectors.accentColor, headingTagColor, 'color'],
+    [selectors.syntaxMarker, instructionTagColor, 'color'],
   ];
 
   const styles = Array.from(document.querySelectorAll('style'));
@@ -222,7 +221,7 @@ function overrideStyles(
 
       if (selector === selectors.emphasisElement) {
         // This is default true since lots of community themes don't have emphasis colors
-        if (colors?.subtleEmphasis ?? true) {
+        if (colors.subtleEmphasis ?? true) {
           rule.style.setProperty('color', 'inherit', 'important');
         } else {
           rule.style.removeProperty('color');
