@@ -4,6 +4,7 @@ import { MarkEdit } from 'markedit-api';
 import { buildBlendedTheme } from './src/builder';
 import { selectors, cssText } from './src/const';
 import { injectStyles, extractTheme, extractTaggedColor, findBackground, lighterColor, isEmptyObject } from './src/utils';
+import { settingsForKey, enabledMode, isModeEnabled } from './src/settings';
 
 import type { EditorView } from '@codemirror/view';
 import type { TagStyle } from '@codemirror/language';
@@ -13,19 +14,49 @@ import type { OriginalRules } from './src/types';
 /**
  * @public
  *
+ * Configuration for overriding themes.
+ *
+ * All properties are optional.
+ */
+export interface Config {
+  /**
+   * Theme for the light mode.
+   */
+  light?: CustomTheme;
+  /**
+   * Theme for the dark mode.
+   */
+  dark?: CustomTheme;
+  /**
+   * Additional options to control the behavior.
+   */
+  options?: {
+    /**
+     * The key of the extension settings in the [settings.json](https://github.com/MarkEdit-app/MarkEdit/wiki/Customization#advanced-settings) file.
+     *
+     * When specified, MarkEdit-theming automatically determines the available themes based on the value of `enabledMode`.
+     */
+    settingsKey?: string;
+  };
+}
+
+/**
+ * @public
+ *
  * Override themes in MarkEdit.
  *
  * It is recommended to call this as soon as your script runs.
- *
- * @param themes Themes for light mode and/or dark mode, both are optional.
  */
-export function overrideThemes(themes: { light?: CustomTheme; dark?: CustomTheme }) {
-  if (themes.light !== undefined) {
-    $context().customThemes.light = themes.light;
+export function overrideThemes(config: Config) {
+  const key = config.options?.settingsKey;
+  const mode = enabledMode(settingsForKey(key));
+
+  if (config.light !== undefined && isModeEnabled(false, mode)) {
+    $context().customThemes.light = config.light;
   }
 
-  if (themes.dark !== undefined) {
-    $context().customThemes.dark = themes.dark;
+  if (config.dark !== undefined && isModeEnabled(true, mode)) {
+    $context().customThemes.dark = config.dark;
   }
 
   if (typeof MarkEdit.editorView === 'object') {

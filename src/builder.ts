@@ -1,7 +1,7 @@
 import { EditorView } from '@codemirror/view';
 import { HighlightStyle, syntaxHighlighting, type TagStyle } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
-import { lightColors, darkColors, isModeCustomized } from './settings';
+import { lightColors, darkColors } from './settings';
 
 import type { Extension } from '@codemirror/state';
 import type { StyleSpec } from 'style-mod';
@@ -11,7 +11,7 @@ export function buildBlendedTheme(isDark: boolean, extension?: Extension, colors
   // In a JS object, values that are spread later have higher priority
   const mergedColors = mergeColors({
     lhs: colors,
-    rhs: isModeCustomized(isDark) ? (isDark ? darkColors : lightColors) : undefined,
+    rhs: isDark ? darkColors : lightColors,
   });
 
   const custom = isDark ? createTheme(mergedColors, { dark: true }) : createTheme(mergedColors);

@@ -4,16 +4,40 @@ import type { Colors } from './colors';
 /**
  * @public
  *
+ * Configuration for overriding themes.
+ *
+ * All properties are optional.
+ */
+export interface Config {
+  /**
+   * Theme for the light mode.
+   */
+  light?: CustomTheme;
+  /**
+   * Theme for the dark mode.
+   */
+  dark?: CustomTheme;
+  /**
+   * Additional options to control the behavior.
+   */
+  options?: {
+    /**
+     * The key of the extension settings in the [settings.json](https://github.com/MarkEdit-app/MarkEdit/wiki/Customization#advanced-settings) file.
+     *
+     * When specified, MarkEdit-theming automatically determines the available themes based on the value of `enabledMode`.
+     */
+    settingsKey?: string;
+  };
+}
+
+/**
+ * @public
+ *
  * Override themes in MarkEdit.
  *
  * It is recommended to call this as soon as your script runs.
- *
- * @param themes Themes for light mode and/or dark mode, both are optional.
  */
-export declare function overrideThemes(themes: {
-  light?: CustomTheme;
-  dark?: CustomTheme;
-}): void;
+export declare function overrideThemes(config: Config): void;
 
 /**
  * @public

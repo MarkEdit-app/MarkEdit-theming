@@ -7,15 +7,22 @@ const view = require("@codemirror/view");
 const language = require("@codemirror/language");
 const toObject = (value, fallback = {}) => value ?? fallback;
 const userSettings = toObject(markeditApi.MarkEdit.userSettings);
-const rootValue = toObject(userSettings["extension.markeditTheming"]);
-const enabledMode = rootValue.enabledMode ?? "both";
-const lightColors = toObject(rootValue.lightTheme);
-const darkColors = toObject(rootValue.darkTheme);
-const isModeCustomized = (isDark) => ["both", isDark ? "dark" : "light"].includes(enabledMode);
+const rootValue = settingsForKey("extension.markeditTheming");
+const lightColors = isModeEnabled(false) ? toObject(rootValue.lightTheme) : void 0;
+const darkColors = isModeEnabled(true) ? toObject(rootValue.darkTheme) : void 0;
+function settingsForKey(key) {
+  return key === void 0 ? {} : toObject(userSettings[key]);
+}
+function enabledMode(settings) {
+  return settings.enabledMode ?? "both";
+}
+function isModeEnabled(isDark, mode = enabledMode(rootValue)) {
+  return ["both", isDark ? "dark" : "light"].includes(mode);
+}
 function buildBlendedTheme(isDark, extension, colors) {
   const mergedColors = mergeColors({
     lhs: colors,
-    rhs: isModeCustomized(isDark) ? isDark ? darkColors : lightColors : void 0
+    rhs: isDark ? darkColors : lightColors
   });
   const custom = isDark ? createTheme(mergedColors, { dark: true }) : createTheme(mergedColors);
   return {
@@ -290,12 +297,14 @@ function parseCssRules(cssText2) {
   }
   return result;
 }
-function overrideThemes(themes) {
-  if (themes.light !== void 0) {
-    $context().customThemes.light = themes.light;
+function overrideThemes(config) {
+  const key = config.options?.settingsKey;
+  const mode = enabledMode(settingsForKey(key));
+  if (config.light !== void 0 && isModeEnabled(false, mode)) {
+    $context().customThemes.light = config.light;
   }
-  if (themes.dark !== void 0) {
-    $context().customThemes.dark = themes.dark;
+  if (config.dark !== void 0 && isModeEnabled(true, mode)) {
+    $context().customThemes.dark = config.dark;
   }
   if (typeof markeditApi.MarkEdit.editorView === "object") {
     updateTheme(markeditApi.MarkEdit.editorView);
