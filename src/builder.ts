@@ -120,8 +120,8 @@ function createTheme(colors: Colors, options?: { dark?: boolean }) {
     tagStyles.push({ tag: [tags.url, tags.link], color: highlightColors?.link });
   }
 
-  if (highlightColors?.separator) {
-    tagStyles.push({ tag: [tags.definition(tags.name), tags.separator, tags.contentSeparator], color: highlightColors?.separator });
+  if (highlightColors?.divider) {
+    tagStyles.push({ tag: tags.contentSeparator, color: highlightColors?.divider });
   }
 
   if (highlightColors?.comment) {
@@ -191,7 +191,7 @@ function createTheme(colors: Colors, options?: { dark?: boolean }) {
   }
 
   if (highlightColors?.instruction) {
-    tagStyles.push({ tag: tags.processingInstruction, color: highlightColors?.instruction });
+    tagStyles.push({ tag: [tags.separator, tags.processingInstruction, tags.definition(tags.name)], color: highlightColors?.instruction });
   }
 
   if (highlightColors?.invalid) {

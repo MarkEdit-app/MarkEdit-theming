@@ -104,8 +104,8 @@ function createTheme(colors, options) {
   if (highlightColors?.link) {
     tagStyles.push({ tag: [highlight.tags.url, highlight.tags.link], color: highlightColors?.link });
   }
-  if (highlightColors?.separator) {
-    tagStyles.push({ tag: [highlight.tags.definition(highlight.tags.name), highlight.tags.separator, highlight.tags.contentSeparator], color: highlightColors?.separator });
+  if (highlightColors?.divider) {
+    tagStyles.push({ tag: highlight.tags.contentSeparator, color: highlightColors?.divider });
   }
   if (highlightColors?.comment) {
     tagStyles.push({ tag: highlight.tags.comment, color: highlightColors?.comment });
@@ -156,7 +156,7 @@ function createTheme(colors, options) {
     tagStyles.push({ tag: [highlight.tags.color, highlight.tags.constant(highlight.tags.name), highlight.tags.standard(highlight.tags.name)], color: highlightColors?.constant });
   }
   if (highlightColors?.instruction) {
-    tagStyles.push({ tag: highlight.tags.processingInstruction, color: highlightColors?.instruction });
+    tagStyles.push({ tag: [highlight.tags.separator, highlight.tags.processingInstruction, highlight.tags.definition(highlight.tags.name)], color: highlightColors?.instruction });
   }
   if (highlightColors?.invalid) {
     tagStyles.push({ tag: highlight.tags.invalid, color: highlightColors?.invalid });
@@ -190,9 +190,12 @@ const selectors = {
   visibleSpace: ".cm-visibleSpace, .cm-visibleSpace::before, .cm-visibleLineBreak, .cm-visibleLineBreak::before",
   matchingBracket: ".cm-matchingBracket",
   activeIndicator: ".cm-md-activeIndicator",
-  emphasisElement: ".cm-md-bold:not(.tok-meta), .cm-md-italic:not(.tok-meta), .cm-md-quote:not(.cm-md-quoteMark)",
   accentColor: ".cm-md-header:not(.tok-meta):not(.cm-md-quote), .cm-md-codeInfo",
-  syntaxMarker: ".cm-md-header.tok-meta:not(.cm-md-quote), .cm-md-codeMark, .cm-md-linkMark, .cm-md-listMark, .cm-md-quoteMark"
+  syntaxMarker: ".cm-md-header.tok-meta:not(.cm-md-quote), .cm-md-codeMark, .cm-md-linkMark, .cm-md-listMark, .cm-md-quoteMark, .cm-md-bold.tok-meta, .cm-md-italic.tok-meta, .cm-md-strikethrough.tok-meta",
+  boldText: ".cm-md-bold:not(.tok-meta)",
+  italicText: ".cm-md-italic:not(.tok-meta)",
+  quoteText: ".cm-md-quote:not(.cm-md-quoteMark)",
+  dividerColor: ".cm-md-horizontalRule"
 };
 const cssText = `
 .cm-activeLineGutter { background: inherit !important }
@@ -202,9 +205,12 @@ ${selectors.foldGutter} {}
 ${selectors.visibleSpace} {}
 ${selectors.matchingBracket} {}
 ${selectors.activeIndicator} {}
-${selectors.emphasisElement} {}
 ${selectors.accentColor} {}
 ${selectors.syntaxMarker} {}
+${selectors.boldText} {}
+${selectors.italicText} {}
+${selectors.quoteText} {}
+${selectors.dividerColor} {}
 `;
 const $global$1 = window;
 const extractStyleRules = $global$1.__extractStyleRules__ ?? ((theme) => theme.value?.rules);
@@ -226,13 +232,13 @@ function extractTheme(extension) {
   }));
   return [styles, themes.flatMap((theme) => extractHighlightSpecs(theme) ?? [])];
 }
-function extractTaggedColor(styles, tag) {
+function extractTaggedColor(styles, tag, fallback) {
   return styles.find((style) => {
     if (style.tag.toString().includes(tag.toString()) && style.color !== void 0) {
       return true;
     }
     return false;
-  })?.color;
+  })?.color ?? fallback;
 }
 function findBackground(styles, selector, exclude) {
   for (const [key, value] of Object.entries(styles)) {
@@ -246,11 +252,11 @@ function findBackground(styles, selector, exclude) {
   return void 0;
 }
 function lighterColor(textColor) {
-  const components = textColor.match(/rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)/);
-  if (components === null) {
+  const rgba = textColor.match(/rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)/);
+  if (rgba === null) {
     return void 0;
   }
-  const [red, green, blue] = components.slice(1, 4).map(Number);
+  const [red, green, blue] = rgba.slice(1, 4).map(Number);
   return `rgba(${red}, ${green}, ${blue}, 0.6)`;
 }
 function isEmptyObject(object) {
@@ -364,16 +370,25 @@ function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors
   const matchingBracket = findBackground(cssStyles, selectors.matchingBracket);
   const primaryColor = getComputedStyle(editor.contentDOM).color;
   const secondaryColor = colors.editor?.visibleSpaceColor ?? lighterColor(primaryColor);
-  const headingTagColor = extractTaggedColor(tagStyles, highlight.tags.heading);
-  const instructionTagColor = extractTaggedColor(tagStyles, highlight.tags.processingInstruction);
+  const emphasisColor = colors.subtleEmphasis === true ? primaryColor : void 0;
+  const accentColor = extractTaggedColor(tagStyles, highlight.tags.heading, emphasisColor);
+  const syntaxMarkerColor = extractTaggedColor(tagStyles, highlight.tags.processingInstruction, emphasisColor);
+  const boldTextColor = extractTaggedColor(tagStyles, highlight.tags.strong, emphasisColor);
+  const italicTextColor = extractTaggedColor(tagStyles, highlight.tags.emphasis, emphasisColor);
+  const quoteTextColor = extractTaggedColor(tagStyles, highlight.tags.quote, emphasisColor);
+  const dividerColor = extractTaggedColor(tagStyles, highlight.tags.contentSeparator, emphasisColor);
   const propertyUpdates = [
     [selectors.activeIndicator, activeLine, "background"],
     [selectors.matchingBracket, matchingBracket, "background"],
     [selectors.lineGutter, primaryColor, "color"],
     [selectors.foldGutter, secondaryColor, "color"],
     [selectors.visibleSpace, secondaryColor, "color"],
-    [selectors.accentColor, headingTagColor, "color"],
-    [selectors.syntaxMarker, instructionTagColor, "color"]
+    [selectors.accentColor, accentColor, "color"],
+    [selectors.syntaxMarker, syntaxMarkerColor, "color"],
+    [selectors.boldText, boldTextColor, "color"],
+    [selectors.italicText, italicTextColor, "color"],
+    [selectors.quoteText, quoteTextColor, "color"],
+    [selectors.dividerColor, dividerColor, "color"]
   ];
   const styles = Array.from(document.querySelectorAll("style"));
   const originalRules = isDark ? $context().darkOriginalRules : $context().lightOriginalRules;
@@ -393,7 +408,7 @@ function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors
           rule.style.setProperty("background", selectionBackground, "important");
         }
       }
-      if (headingTagColor !== void 0 && (selector === ".cm-md-header" || selector === ".cm-md-header:not(.cm-md-quote)")) {
+      if (accentColor !== void 0 && (selector === ".cm-md-header" || selector === ".cm-md-header:not(.cm-md-quote)")) {
         originalRules.markdownHeader ??= rule.cssText;
         if (isDisabled) {
           rule.cssText = originalRules.markdownHeader;
@@ -408,18 +423,10 @@ function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors
         if (color === void 0) {
           rule.style.removeProperty(property);
         } else {
-          const priority = [selectors.accentColor, selectors.syntaxMarker].includes(selector) ? void 0 : "important";
-          rule.style.setProperty(property, color, priority);
+          rule.style.setProperty(property, color, "important");
           if (selector === selectors.matchingBracket || selector === selectors.activeIndicator) {
             rule.style.setProperty("box-shadow", "unset", "important");
           }
-        }
-      }
-      if (selector === selectors.emphasisElement) {
-        if (colors.subtleEmphasis ?? true) {
-          rule.style.setProperty("color", "inherit", "important");
-        } else {
-          rule.style.removeProperty("color");
         }
       }
     }

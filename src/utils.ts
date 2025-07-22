@@ -44,7 +44,7 @@ export function extractTheme(extension: Extension[]): [Styles, TagStyle[]] {
 /**
  * Returns the defined color from tag styles.
  */
-export function extractTaggedColor(styles: TagStyle[], tag: Tag): string | undefined {
+export function extractTaggedColor(styles: TagStyle[], tag: Tag, fallback?: string): string | undefined {
   return styles.find(style => {
     // E.g., "heading,heading1" includes "heading"
     if (style.tag.toString().includes(tag.toString()) && style.color !== undefined) {
@@ -52,7 +52,7 @@ export function extractTaggedColor(styles: TagStyle[], tag: Tag): string | undef
     }
 
     return false;
-  })?.color;
+  })?.color ?? fallback;
 }
 
 /**
@@ -75,12 +75,12 @@ export function findBackground(styles: Styles, selector: string, exclude?: strin
  * Returns a lighter color of the input.
  */
 export function lighterColor(textColor: string): string | undefined {
-  const components = textColor.match(/rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)/);
-  if (components === null) {
+  const rgba = textColor.match(/rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)/);
+  if (rgba === null) {
     return undefined;
   }
 
-  const [red, green, blue] = components.slice(1, 4).map(Number);
+  const [red, green, blue] = rgba.slice(1, 4).map(Number);
   return `rgba(${red}, ${green}, ${blue}, 0.6)`;
 }
 

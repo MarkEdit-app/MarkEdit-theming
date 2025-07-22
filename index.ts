@@ -185,8 +185,14 @@ function overrideStyles(
   const matchingBracket = findBackground(cssStyles, selectors.matchingBracket);
   const primaryColor = getComputedStyle(editor.contentDOM).color;
   const secondaryColor = colors.editor?.visibleSpaceColor ?? lighterColor(primaryColor);
-  const headingTagColor = extractTaggedColor(tagStyles, tags.heading);
-  const instructionTagColor = extractTaggedColor(tagStyles, tags.processingInstruction);
+  const emphasisColor = colors.subtleEmphasis === true ? primaryColor : undefined;
+
+  const accentColor = extractTaggedColor(tagStyles, tags.heading, emphasisColor);
+  const syntaxMarkerColor = extractTaggedColor(tagStyles, tags.processingInstruction, emphasisColor);
+  const boldTextColor = extractTaggedColor(tagStyles, tags.strong, emphasisColor);
+  const italicTextColor = extractTaggedColor(tagStyles, tags.emphasis, emphasisColor);
+  const quoteTextColor = extractTaggedColor(tagStyles, tags.quote, emphasisColor);
+  const dividerColor = extractTaggedColor(tagStyles, tags.contentSeparator, emphasisColor);
 
   const propertyUpdates: [string, string | undefined, 'background' | 'color'][] = [
     [selectors.activeIndicator, activeLine, 'background'],
@@ -194,8 +200,12 @@ function overrideStyles(
     [selectors.lineGutter, primaryColor, 'color'],
     [selectors.foldGutter, secondaryColor, 'color'],
     [selectors.visibleSpace, secondaryColor, 'color'],
-    [selectors.accentColor, headingTagColor, 'color'],
-    [selectors.syntaxMarker, instructionTagColor, 'color'],
+    [selectors.accentColor, accentColor, 'color'],
+    [selectors.syntaxMarker, syntaxMarkerColor, 'color'],
+    [selectors.boldText, boldTextColor, 'color'],
+    [selectors.italicText, italicTextColor, 'color'],
+    [selectors.quoteText, quoteTextColor, 'color'],
+    [selectors.dividerColor, dividerColor, 'color'],
   ];
 
   const styles = Array.from(document.querySelectorAll('style'));
@@ -222,7 +232,7 @@ function overrideStyles(
       }
 
       // Markdown headings
-      if (headingTagColor !== undefined && (selector === '.cm-md-header' || selector === '.cm-md-header:not(.cm-md-quote)')) {
+      if (accentColor !== undefined && (selector === '.cm-md-header' || selector === '.cm-md-header:not(.cm-md-quote)')) {
         originalRules.markdownHeader ??= rule.cssText;
         if (isDisabled) {
           rule.cssText = originalRules.markdownHeader;
@@ -240,22 +250,12 @@ function overrideStyles(
         if (color === undefined) {
           rule.style.removeProperty(property);
         } else {
-          const priority = [selectors.accentColor, selectors.syntaxMarker].includes(selector) ? undefined : 'important';
-          rule.style.setProperty(property, color, priority);
+          rule.style.setProperty(property, color, 'important');
 
           // Remove the special styling in MarkEdit when colors are provided
           if (selector === selectors.matchingBracket || selector === selectors.activeIndicator) {
             rule.style.setProperty('box-shadow', 'unset', 'important');
           }
-        }
-      }
-
-      if (selector === selectors.emphasisElement) {
-        // This is default true since lots of community themes don't have emphasis colors
-        if (colors.subtleEmphasis ?? true) {
-          rule.style.setProperty('color', 'inherit', 'important');
-        } else {
-          rule.style.removeProperty('color');
         }
       }
     }

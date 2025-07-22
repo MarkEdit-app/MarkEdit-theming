@@ -73,7 +73,7 @@ export interface Colors {
     strikethrough?: string;
     quote?: string;
     link?: string;
-    separator?: string;
+    divider?: string;
     comment?: string;
     meta?: string;
     keyword?: string;
@@ -97,8 +97,6 @@ export interface Colors {
    * If true, syntax like bold, italic, and quote will inherit the editor text color.
    *
    * Used in themes that don't define specific colors for bold, italic, or quote syntax, to prevent fallback to unintended default colors.
-   *
-   * @default true
    */
   subtleEmphasis?: boolean;
 }
