@@ -220,6 +220,6 @@ function mergeColors(colors: { lhs?: Colors, rhs?: Colors }): Colors {
       ...colors.lhs?.highlight,
       ...colors.rhs?.highlight,
     },
-    subtleEmphasis: colors.rhs?.subtleEmphasis ?? colors.lhs?.subtleEmphasis,
+    allowsFallback: colors.rhs?.allowsFallback ?? colors.lhs?.allowsFallback,
   };
 }

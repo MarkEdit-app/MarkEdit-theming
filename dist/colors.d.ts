@@ -94,9 +94,9 @@ export interface Colors {
     invalid?: string;
   };
   /**
-   * If true, syntax like bold, italic, and quote will inherit the editor text color.
+   * If true, styles like bold, italic, and quote will inherit the editor text color when no specific color is provided.
    *
-   * Used in themes that don't define specific colors for bold, italic, or quote syntax, to prevent fallback to unintended default colors.
+   * @default true
    */
-  subtleEmphasis?: boolean;
+  allowsFallback?: boolean;
 }

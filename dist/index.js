@@ -178,7 +178,7 @@ function mergeColors(colors) {
       ...colors.lhs?.highlight,
       ...colors.rhs?.highlight
     },
-    subtleEmphasis: colors.rhs?.subtleEmphasis ?? colors.lhs?.subtleEmphasis
+    allowsFallback: colors.rhs?.allowsFallback ?? colors.lhs?.allowsFallback
   };
 }
 const selectors = {
@@ -352,6 +352,7 @@ function updateTheme(editor) {
   });
   const [cssStyles, tagStyles] = extractTheme(extensions);
   const isDisabled = extensions.length === 0 && isEmptyObject(colors);
+  const shouldFallback = (colors.allowsFallback ?? true) && theme?.extension !== void 0;
   $context().styleSheet.disabled = isDisabled;
   overrideStyles(
     editor,
@@ -359,22 +360,23 @@ function updateTheme(editor) {
     isDisabled,
     cssStyles,
     tagStyles,
-    colors
+    colors,
+    shouldFallback
   );
 }
-function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors) {
+function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors, shouldFallback) {
   const activeLine = findBackground(cssStyles, ".cm-activeLine", ".cm-activeLineGutter");
   const selectionBackground = findBackground(cssStyles, selectors.selectionBackground);
   const matchingBracket = findBackground(cssStyles, selectors.matchingBracket);
   const primaryColor = getComputedStyle(editor.contentDOM).color;
   const secondaryColor = colors.editor?.visibleSpaceColor ?? lighterColor(primaryColor);
-  const emphasisColor = colors.subtleEmphasis === true ? primaryColor : void 0;
-  const accentColor = extractTaggedColor(tagStyles, tags.heading, emphasisColor);
-  const syntaxMarkerColor = extractTaggedColor(tagStyles, tags.processingInstruction, emphasisColor);
-  const boldTextColor = extractTaggedColor(tagStyles, tags.strong, emphasisColor);
-  const italicTextColor = extractTaggedColor(tagStyles, tags.emphasis, emphasisColor);
-  const quoteTextColor = extractTaggedColor(tagStyles, tags.quote, emphasisColor);
-  const dividerColor = extractTaggedColor(tagStyles, tags.contentSeparator, emphasisColor);
+  const fallbackColor = shouldFallback ? primaryColor : void 0;
+  const accentColor = extractTaggedColor(tagStyles, tags.heading, fallbackColor);
+  const syntaxMarkerColor = extractTaggedColor(tagStyles, tags.processingInstruction, fallbackColor);
+  const boldTextColor = extractTaggedColor(tagStyles, tags.strong, fallbackColor);
+  const italicTextColor = extractTaggedColor(tagStyles, tags.emphasis, fallbackColor);
+  const quoteTextColor = extractTaggedColor(tagStyles, tags.quote, fallbackColor);
+  const dividerColor = extractTaggedColor(tagStyles, tags.contentSeparator, fallbackColor);
   const propertyUpdates = [
     [selectors.activeIndicator, activeLine, "background"],
     [selectors.matchingBracket, matchingBracket, "background"],
