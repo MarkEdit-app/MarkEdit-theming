@@ -156,7 +156,7 @@ function updateTheme(editor: EditorView) {
   // Get the css styles and tag styles from the used EditorView.theme
   const [cssStyles, tagStyles] = extractTheme(extensions);
   const isDisabled = extensions.length === 0 && isEmptyObject(colors);
-  const shouldFallback = (colors.allowsFallback ?? true) && theme?.extension !== undefined;
+  const shouldFallback = colors.allowsFallback ?? theme?.extension !== undefined;
 
   // Reconfigure the style sheets
   $context().styleSheet.disabled = isDisabled;

@@ -352,7 +352,7 @@ function updateTheme(editor) {
   });
   const [cssStyles, tagStyles] = extractTheme(extensions);
   const isDisabled = extensions.length === 0 && isEmptyObject(colors);
-  const shouldFallback = (colors.allowsFallback ?? true) && theme?.extension !== void 0;
+  const shouldFallback = colors.allowsFallback ?? theme?.extension !== void 0;
   $context().styleSheet.disabled = isDisabled;
   overrideStyles(
     editor,
