@@ -338,7 +338,7 @@ function initContext() {
   };
   MarkEdit.addExtension($context().configurator.of([]));
   MarkEdit.onEditorReady((editor) => updateTheme(editor));
-  const invokeUpdate = () => setTimeout(() => updateTheme(MarkEdit.editorView), 15);
+  const invokeUpdate = () => setTimeout(() => updateTheme(MarkEdit.editorView), 200);
   $scheme.addEventListener("change", invokeUpdate);
   $context().mainThemeName = $global.config.theme;
   Object.defineProperty($global.config, "theme", {

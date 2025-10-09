@@ -124,7 +124,7 @@ function initContext() {
   MarkEdit.onEditorReady(editor => updateTheme(editor));
 
   // Update when the color scheme changed
-  const invokeUpdate = () => setTimeout(() => updateTheme(MarkEdit.editorView), 15);
+  const invokeUpdate = () => setTimeout(() => updateTheme(MarkEdit.editorView), 200);
   $scheme.addEventListener('change', invokeUpdate);
 
   // Update when the app main theme changed
