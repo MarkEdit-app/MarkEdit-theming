@@ -186,6 +186,7 @@ function overrideStyles(
   const activeLine = findBackground(cssStyles, '.cm-activeLine', '.cm-activeLineGutter');
   const selectionBackground = findBackground(cssStyles, selectors.selectionBackground);
   const matchingBracket = findBackground(cssStyles, selectors.matchingBracket);
+  const backgroundColor = getComputedStyle(editor.dom).backgroundColor;
   const primaryColor = getComputedStyle(editor.contentDOM).color;
   const secondaryColor = colors.editor?.visibleSpaceColor ?? lighterColor(primaryColor);
   const fallbackColor = shouldFallback ? primaryColor : undefined;
@@ -197,18 +198,20 @@ function overrideStyles(
   const quoteTextColor = extractTaggedColor(tagStyles, tags.quote, fallbackColor);
   const dividerColor = extractTaggedColor(tagStyles, tags.contentSeparator, fallbackColor);
 
-  const propertyUpdates: [string, string | undefined, 'background' | 'color'][] = [
+  const propertyUpdates: [string, string | undefined, 'background' | 'color' | 'border'][] = [
     [selectors.activeIndicator, activeLine, 'background'],
     [selectors.matchingBracket, matchingBracket, 'background'],
-    [selectors.lineGutter, primaryColor, 'color'],
-    [selectors.foldGutter, secondaryColor, 'color'],
-    [selectors.visibleSpace, secondaryColor, 'color'],
+    [selectors.primaryText, primaryColor, 'color'],
+    [selectors.secondaryText, secondaryColor, 'color'],
     [selectors.accentColor, accentColor, 'color'],
     [selectors.syntaxMarker, syntaxMarkerColor, 'color'],
     [selectors.boldText, boldTextColor, 'color'],
     [selectors.italicText, italicTextColor, 'color'],
     [selectors.quoteText, quoteTextColor, 'color'],
     [selectors.dividerColor, dividerColor, 'color'],
+    [selectors.autocomplete, lighterColor(backgroundColor), 'background'],
+    [selectors.autocomplete, `1px solid ${lighterColor(primaryColor, 0.3)}`, 'border'],
+    [selectors.autocompleteHighlight, lighterColor(primaryColor, 0.1), 'background'],
   ];
 
   const styles = Array.from(document.querySelectorAll('style'));

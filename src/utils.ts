@@ -74,14 +74,14 @@ export function findBackground(styles: Styles, selector: string, exclude?: strin
 /**
  * Returns a lighter color of the input.
  */
-export function lighterColor(textColor: string): string | undefined {
+export function lighterColor(textColor: string, alpha = 0.6): string | undefined {
   const rgba = textColor.match(/rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)/);
   if (rgba === null) {
     return undefined;
   }
 
   const [red, green, blue] = rgba.slice(1, 4).map(Number);
-  return `rgba(${red}, ${green}, ${blue}, 0.6)`;
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
 /**
@@ -108,12 +108,10 @@ export function isEmptyObject(object: unknown): boolean {
   return true;
 }
 
-// MARK: - Private
-
 /**
  * Get flattened themes, since CodeMirror Extension is recursively declared.
  */
-function flattenThemes(node: Extension): Extension[] {
+export function flattenThemes(node: Extension): Extension[] {
   if (Array.isArray(node)) {
     return node.flatMap(flattenThemes);
   } else if ('extension' in node) {
@@ -122,6 +120,8 @@ function flattenThemes(node: Extension): Extension[] {
     return [node];
   }
 }
+
+// MARK: - Private
 
 /**
  * Parse CSS rules from CSS text, we only care about background colors.

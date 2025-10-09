@@ -1,6 +1,7 @@
 import { EditorView } from '@codemirror/view';
 import { HighlightStyle, syntaxHighlighting, type TagStyle } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
+import { flattenThemes } from './utils';
 import { lightColors, darkColors } from './settings';
 
 import type { Extension } from '@codemirror/state';
@@ -12,6 +13,14 @@ export function buildBlendedTheme(isDark: boolean, extension?: Extension, colors
   const mergedColors = mergeColors({
     lhs: colors,
     rhs: isDark ? darkColors : lightColors,
+  });
+
+  // Delete rules from the theme extension that introduce issues
+  flattenThemes(extension ?? []).forEach(input => {
+    const typed = input as { value?: { rules: string[] }};
+    if (typed.value && Array.isArray(typed.value?.rules)) {
+      typed.value.rules = typed.value?.rules.filter(rule => !(`${rule}`.includes('.cm-tooltip')));
+    }
   });
 
   const custom = isDark ? createTheme(mergedColors, { dark: true }) : createTheme(mergedColors);

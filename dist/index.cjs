@@ -5,6 +5,97 @@ const highlight = require("@lezer/highlight");
 const markeditApi = require("markedit-api");
 const view = require("@codemirror/view");
 const language = require("@codemirror/language");
+const $global$1 = window;
+const extractStyleRules = $global$1.__extractStyleRules__ ?? ((theme) => theme.value?.rules);
+const extractHighlightSpecs = $global$1.__extractHighlightSpecs__ ?? ((theme) => theme.value?.specs);
+function injectStyles(cssText2) {
+  const style = document.createElement("style");
+  style.textContent = cssText2;
+  document.head.appendChild(style);
+  return style;
+}
+function extractTheme(extension) {
+  if (extension.length === 0) {
+    return [{}, []];
+  }
+  const themes = flattenThemes(extension);
+  const styles = Object.fromEntries(themes.flatMap((theme) => {
+    const rules = extractStyleRules(theme)?.join("\n") ?? "";
+    return Object.entries(parseCssRules(rules));
+  }));
+  return [styles, themes.flatMap((theme) => extractHighlightSpecs(theme) ?? [])];
+}
+function extractTaggedColor(styles, tag, fallback) {
+  return styles.find((style) => {
+    if (style.tag.toString().includes(tag.toString()) && style.color !== void 0) {
+      return true;
+    }
+    return false;
+  })?.color ?? fallback;
+}
+function findBackground(styles, selector, exclude) {
+  for (const [key, value] of Object.entries(styles)) {
+    if (key.includes(selector) && (exclude === void 0 || !key.includes(exclude))) {
+      const background = value["background"] ?? value["backgroundColor"];
+      if (background !== void 0) {
+        return background;
+      }
+    }
+  }
+  return void 0;
+}
+function lighterColor(textColor, alpha = 0.6) {
+  const rgba = textColor.match(/rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)/);
+  if (rgba === null) {
+    return void 0;
+  }
+  const [red, green, blue] = rgba.slice(1, 4).map(Number);
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+function isEmptyObject(object) {
+  const isValid = (value) => value !== null && typeof value === "object";
+  if (!isValid(object)) {
+    return true;
+  }
+  const entries = Object.entries(object);
+  const hasValue = (value) => value !== void 0 && value !== null;
+  for (const [, value] of entries) {
+    if (isValid(value)) {
+      if (!isEmptyObject(value)) {
+        return false;
+      }
+    } else if (hasValue(value)) {
+      return false;
+    }
+  }
+  return true;
+}
+function flattenThemes(node) {
+  if (Array.isArray(node)) {
+    return node.flatMap(flattenThemes);
+  } else if ("extension" in node) {
+    return flattenThemes(node.extension);
+  } else {
+    return [node];
+  }
+}
+function parseCssRules(cssText2) {
+  const result = {};
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(cssText2);
+  for (const rule of sheet.cssRules) {
+    const { style, selectorText: selector } = rule;
+    const { background, backgroundColor } = style;
+    result[selector] = {};
+    if (background.length > 0) {
+      result[selector].background = background;
+    }
+    if (backgroundColor.length > 0) {
+      result[selector].backgroundColor = backgroundColor;
+    }
+  }
+  return result;
+}
 const toObject = (value, fallback = {}) => value ?? fallback;
 const userSettings = toObject(markeditApi.MarkEdit.userSettings);
 const rootValue = settingsForKey("extension.markeditTheming");
@@ -23,6 +114,12 @@ function buildBlendedTheme(isDark, extension, colors) {
   const mergedColors = mergeColors({
     lhs: colors,
     rhs: isDark ? darkColors : lightColors
+  });
+  flattenThemes(extension ?? []).forEach((input) => {
+    const typed = input;
+    if (typed.value && Array.isArray(typed.value?.rules)) {
+      typed.value.rules = typed.value?.rules.filter((rule) => !`${rule}`.includes(".cm-tooltip"));
+    }
   });
   const custom = isDark ? createTheme(mergedColors, { dark: true }) : createTheme(mergedColors);
   return {
@@ -185,24 +282,24 @@ function mergeColors(colors) {
 }
 const selectors = {
   selectionBackground: ".cm-selectionBackground",
-  lineGutter: ".cm-lineNumbers > .cm-activeLineGutter",
-  foldGutter: ".cm-foldGutter, .cm-foldPlaceholder",
-  visibleSpace: ".cm-visibleSpace, .cm-visibleSpace::before, .cm-visibleLineBreak, .cm-visibleLineBreak::before",
+  primaryText: ".cm-lineNumbers > .cm-activeLineGutter, .cm-tooltip-autocomplete ul li, .cm-tooltip-autocomplete ul li[aria-selected]",
+  secondaryText: ".cm-foldGutter, .cm-foldPlaceholder, .cm-visibleSpace, .cm-visibleSpace::before, .cm-visibleLineBreak, .cm-visibleLineBreak::before",
   matchingBracket: ".cm-matchingBracket",
   activeIndicator: ".cm-md-activeIndicator",
-  accentColor: ".cm-md-header:not(.tok-meta):not(.cm-md-quote), .cm-md-codeInfo",
+  accentColor: ".cm-md-header:not(.tok-meta):not(.cm-md-quote), .cm-md-codeInfo, .cm-completionMatchedText",
   syntaxMarker: ".cm-md-header.tok-meta:not(.cm-md-quote), .cm-md-codeMark, .cm-md-linkMark, .cm-md-listMark, .cm-md-quoteMark, .cm-md-bold.tok-meta, .cm-md-italic.tok-meta, .cm-md-strikethrough.tok-meta",
   boldText: ".cm-md-bold:not(.tok-meta)",
   italicText: ".cm-md-italic:not(.tok-meta)",
   quoteText: ".cm-md-quote:not(.cm-md-quoteMark)",
-  dividerColor: ".cm-md-horizontalRule"
+  dividerColor: ".cm-md-horizontalRule",
+  autocomplete: ".cm-tooltip-autocomplete",
+  autocompleteHighlight: ".cm-tooltip-autocomplete ul li[aria-selected]"
 };
 const cssText = `
 .cm-activeLineGutter { background: inherit !important }
 .cm-searchMatch.cm-searchMatch-selected { outline: inherit !important }
-${selectors.lineGutter} {}
-${selectors.foldGutter} {}
-${selectors.visibleSpace} {}
+${selectors.primaryText} {}
+${selectors.secondaryText} {}
 ${selectors.matchingBracket} {}
 ${selectors.activeIndicator} {}
 ${selectors.accentColor} {}
@@ -211,98 +308,9 @@ ${selectors.boldText} {}
 ${selectors.italicText} {}
 ${selectors.quoteText} {}
 ${selectors.dividerColor} {}
+${selectors.autocomplete} {}
+${selectors.autocompleteHighlight} {}
 `;
-const $global$1 = window;
-const extractStyleRules = $global$1.__extractStyleRules__ ?? ((theme) => theme.value?.rules);
-const extractHighlightSpecs = $global$1.__extractHighlightSpecs__ ?? ((theme) => theme.value?.specs);
-function injectStyles(cssText2) {
-  const style = document.createElement("style");
-  style.textContent = cssText2;
-  document.head.appendChild(style);
-  return style;
-}
-function extractTheme(extension) {
-  if (extension.length === 0) {
-    return [{}, []];
-  }
-  const themes = flattenThemes(extension);
-  const styles = Object.fromEntries(themes.flatMap((theme) => {
-    const rules = extractStyleRules(theme)?.join("\n") ?? "";
-    return Object.entries(parseCssRules(rules));
-  }));
-  return [styles, themes.flatMap((theme) => extractHighlightSpecs(theme) ?? [])];
-}
-function extractTaggedColor(styles, tag, fallback) {
-  return styles.find((style) => {
-    if (style.tag.toString().includes(tag.toString()) && style.color !== void 0) {
-      return true;
-    }
-    return false;
-  })?.color ?? fallback;
-}
-function findBackground(styles, selector, exclude) {
-  for (const [key, value] of Object.entries(styles)) {
-    if (key.includes(selector) && (exclude === void 0 || !key.includes(exclude))) {
-      const background = value["background"] ?? value["backgroundColor"];
-      if (background !== void 0) {
-        return background;
-      }
-    }
-  }
-  return void 0;
-}
-function lighterColor(textColor) {
-  const rgba = textColor.match(/rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)/);
-  if (rgba === null) {
-    return void 0;
-  }
-  const [red, green, blue] = rgba.slice(1, 4).map(Number);
-  return `rgba(${red}, ${green}, ${blue}, 0.6)`;
-}
-function isEmptyObject(object) {
-  const isValid = (value) => value !== null && typeof value === "object";
-  if (!isValid(object)) {
-    return true;
-  }
-  const entries = Object.entries(object);
-  const hasValue = (value) => value !== void 0 && value !== null;
-  for (const [, value] of entries) {
-    if (isValid(value)) {
-      if (!isEmptyObject(value)) {
-        return false;
-      }
-    } else if (hasValue(value)) {
-      return false;
-    }
-  }
-  return true;
-}
-function flattenThemes(node) {
-  if (Array.isArray(node)) {
-    return node.flatMap(flattenThemes);
-  } else if ("extension" in node) {
-    return flattenThemes(node.extension);
-  } else {
-    return [node];
-  }
-}
-function parseCssRules(cssText2) {
-  const result = {};
-  const sheet = new CSSStyleSheet();
-  sheet.replaceSync(cssText2);
-  for (const rule of sheet.cssRules) {
-    const { style, selectorText: selector } = rule;
-    const { background, backgroundColor } = style;
-    result[selector] = {};
-    if (background.length > 0) {
-      result[selector].background = background;
-    }
-    if (backgroundColor.length > 0) {
-      result[selector].backgroundColor = backgroundColor;
-    }
-  }
-  return result;
-}
 function overrideThemes(config) {
   const key = config.options?.settingsKey;
   const mode = enabledMode(settingsForKey(key));
@@ -370,6 +378,7 @@ function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors
   const activeLine = findBackground(cssStyles, ".cm-activeLine", ".cm-activeLineGutter");
   const selectionBackground = findBackground(cssStyles, selectors.selectionBackground);
   const matchingBracket = findBackground(cssStyles, selectors.matchingBracket);
+  const backgroundColor = getComputedStyle(editor.dom).backgroundColor;
   const primaryColor = getComputedStyle(editor.contentDOM).color;
   const secondaryColor = colors.editor?.visibleSpaceColor ?? lighterColor(primaryColor);
   const fallbackColor = shouldFallback ? primaryColor : void 0;
@@ -382,15 +391,17 @@ function overrideStyles(editor, isDark, isDisabled, cssStyles, tagStyles, colors
   const propertyUpdates = [
     [selectors.activeIndicator, activeLine, "background"],
     [selectors.matchingBracket, matchingBracket, "background"],
-    [selectors.lineGutter, primaryColor, "color"],
-    [selectors.foldGutter, secondaryColor, "color"],
-    [selectors.visibleSpace, secondaryColor, "color"],
+    [selectors.primaryText, primaryColor, "color"],
+    [selectors.secondaryText, secondaryColor, "color"],
     [selectors.accentColor, accentColor, "color"],
     [selectors.syntaxMarker, syntaxMarkerColor, "color"],
     [selectors.boldText, boldTextColor, "color"],
     [selectors.italicText, italicTextColor, "color"],
     [selectors.quoteText, quoteTextColor, "color"],
-    [selectors.dividerColor, dividerColor, "color"]
+    [selectors.dividerColor, dividerColor, "color"],
+    [selectors.autocomplete, lighterColor(backgroundColor), "background"],
+    [selectors.autocomplete, `1px solid ${lighterColor(primaryColor, 0.3)}`, "border"],
+    [selectors.autocompleteHighlight, lighterColor(primaryColor, 0.1), "background"]
   ];
   const styles = Array.from(document.querySelectorAll("style"));
   const originalRules = isDark ? $context().darkOriginalRules : $context().lightOriginalRules;
