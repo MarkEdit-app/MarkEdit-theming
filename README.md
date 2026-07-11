@@ -2,7 +2,7 @@
 
 Easily create custom [MarkEdit](https://github.com/MarkEdit-app/MarkEdit) themes using existing CodeMirror theme extensions. See [MarkEdit-api](https://github.com/MarkEdit-app/MarkEdit-api) to learn more.
 
-Please see [this page](https://github.com/MarkEdit-app/MarkEdit/wiki/Extensions#list-of-themes) for a complete list of themes and an explanation of how they work.
+Please see [MarkEdit Themes](https://markedit-app.github.io/extensions/#themes) for a complete list of themes and an explanation of how they work.
 
 ## Usage
 
