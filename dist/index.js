@@ -69,9 +69,12 @@ function isEmptyObject(object) {
   return true;
 }
 function flattenThemes(node) {
+  if ($global$1.__flattenThemeExtensions__ !== void 0) {
+    return $global$1.__flattenThemeExtensions__(node);
+  }
   if (Array.isArray(node)) {
     return node.flatMap(flattenThemes);
-  } else if ("extension" in node) {
+  } else if ("extension" in node && node.extension !== node) {
     return flattenThemes(node.extension);
   } else {
     return [node];
@@ -334,7 +337,8 @@ function initContext() {
     configurator: new Compartment(),
     customThemes: {},
     lightOriginalRules: {},
-    darkOriginalRules: {}
+    darkOriginalRules: {},
+    circularReferencePatched: true
   };
   MarkEdit.addExtension($context().configurator.of([]));
   MarkEdit.onEditorReady((editor) => updateTheme(editor));

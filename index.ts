@@ -98,6 +98,7 @@ const $global = (window as unknown) as {
     customThemes: Parameters<typeof overrideThemes>[0];
     lightOriginalRules: OriginalRules;
     darkOriginalRules: OriginalRules;
+    circularReferencePatched: boolean;
   }
 };
 
@@ -117,6 +118,7 @@ function initContext() {
     customThemes: {},
     lightOriginalRules: {},
     darkOriginalRules: {},
+    circularReferencePatched: true,
   };
 
   // Update when the editor is ready

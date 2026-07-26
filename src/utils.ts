@@ -8,6 +8,7 @@ type Theme = Extension & { value?: { rules?: string[]; specs?: TagStyle[]; } };
 const $global = window as {
   __extractStyleRules__?: (theme: Extension) => string[] | undefined;
   __extractHighlightSpecs__?: (theme: Extension) => TagStyle[] | undefined;
+  __flattenThemeExtensions__?: (theme: Extension) => Extension[];
 };
 
 // Prefer a stable version provided by the main app, which can be updated as the app evolves
@@ -112,9 +113,13 @@ export function isEmptyObject(object: unknown): boolean {
  * Get flattened themes, since CodeMirror Extension is recursively declared.
  */
 export function flattenThemes(node: Extension): Extension[] {
+  if ($global.__flattenThemeExtensions__ !== undefined) {
+    return $global.__flattenThemeExtensions__(node);
+  }
+
   if (Array.isArray(node)) {
     return node.flatMap(flattenThemes);
-  } else if ('extension' in node) {
+  } else if ('extension' in node && node.extension !== node) {
     return flattenThemes(node.extension);
   } else {
     return [node];
