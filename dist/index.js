@@ -312,6 +312,45 @@ ${selectors.dividerColor} {}
 ${selectors.autocomplete} {}
 ${selectors.autocompleteHighlight} {}
 `;
+function buildPreviewCss(styles) {
+  const rules = [];
+  const rule = (selector, declarations) => {
+    const body2 = Object.entries(declarations).filter((entry) => entry[1] !== void 0).map(([property, value]) => `${property}: ${value} !important;`).join(" ");
+    if (body2.length > 0) {
+      rules.push(`${selector} { ${body2} }`);
+    }
+  };
+  const body = styles.markdownBody;
+  rule(".markdown-body", { background: body?.background, color: body?.color });
+  const headings = styles.headings;
+  rule(
+    ".markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6",
+    { color: headings?.color, background: headings?.background, "border-bottom-color": headings?.borderColor }
+  );
+  rule(".markdown-body a", { color: styles.links?.color, background: styles.links?.background });
+  const inlineCode = styles.inlineCode;
+  rule(".markdown-body code, .markdown-body tt", { color: inlineCode?.color, background: inlineCode?.background });
+  const codeBlocks = styles.codeBlocks;
+  if (codeBlocks !== void 0) {
+    rule(".markdown-body pre", { background: codeBlocks.background });
+    rule(".markdown-body pre code", { color: codeBlocks.color, background: "transparent" });
+  }
+  const blockquotes = styles.blockquotes;
+  rule(".markdown-body blockquote", {
+    color: blockquotes?.color,
+    background: blockquotes?.background,
+    "border-left-color": blockquotes?.borderColor
+  });
+  const tables = styles.tables;
+  rule(".markdown-body table th, .markdown-body table td", { "border-color": tables?.borderColor });
+  rule(".markdown-body table th", { background: tables?.background });
+  if (tables?.alternatingRowBackground !== void 0) {
+    rule(".markdown-body table tr", { background: styles.markdownBody?.background });
+    rule(".markdown-body table tr:nth-child(2n)", { background: tables.alternatingRowBackground });
+  }
+  rule(".markdown-body hr", { background: styles.dividers?.color ?? styles.dividers?.background });
+  return rules.join("\n");
+}
 function overrideThemes(config) {
   const key = config.options?.settingsKey;
   const mode = enabledMode(settingsForKey(key));
@@ -359,6 +398,8 @@ function updateTheme(editor) {
   const isDark = $scheme.matches;
   const theme = isDark ? $context().customThemes.dark : $context().customThemes.light;
   const { extensions, colors } = buildBlendedTheme(isDark, theme?.extension, theme?.colors);
+  const previewStyleSheet = $context().previewStyleSheet ??= injectStyles("");
+  previewStyleSheet.textContent = theme?.previewStyles !== void 0 ? buildPreviewCss(theme.previewStyles) : "";
   editor.dispatch({
     effects: $context().configurator.reconfigure(extensions)
   });

@@ -1,5 +1,7 @@
 import { type Extension } from '@codemirror/state';
 import type { Colors } from './colors';
+import type { PreviewStyles } from './preview';
+export type { PreviewStyles, PreviewElementStyles } from './preview';
 
 /**
  * @public
@@ -55,4 +57,10 @@ export interface CustomTheme {
    * The colors for editor theme, syntax highlighting, etc.
    */
   colors?: Colors;
+  /**
+   * Styles for the [MarkEdit-preview](https://github.com/MarkEdit-app/MarkEdit-preview) pane, applied when this theme is active.
+   *
+   * It is a no-op when the preview extension is not installed.
+   */
+  previewStyles?: PreviewStyles;
 }

@@ -29,6 +29,35 @@ overrideThemes({
 
 This package is fully typed and documented, see [index.d.ts](/dist/index.d.ts) for details.
 
+### Preview styling
+
+A theme can also style the [MarkEdit-preview](https://github.com/MarkEdit-app/MarkEdit-preview) pane, so Preview mode matches the editor. Declare colors via `previewStyles`; they are applied only while that theme variant is active, and it is a no-op when the preview extension is not installed:
+
+```ts
+overrideThemes({
+  light: {
+    extension,
+    colors,
+    previewStyles: {
+      markdownBody: { background: '#faf8f5', color: '#2d2006' },
+      links: { color: '#1659df' },
+      inlineCode: { color: '#896724', background: '#ddceb154' },
+    },
+  },
+  dark: {
+    extension,
+    colors,
+    previewStyles: {
+      markdownBody: { background: '#2a2734', color: '#eeebff' },
+      links: { color: '#9a86fd' },
+      inlineCode: { color: '#ffb870', background: '#36334280' },
+    },
+  },
+});
+```
+
+Available groups: `markdownBody`, `headings`, `links`, `inlineCode`, `codeBlocks`, `blockquotes`, `tables`, and `dividers` — see `PreviewStyles` in [index.d.ts](/dist/index.d.ts).
+
 ## User Customization
 
 Themes built with this package provide a way for user to customize colors, see the [wiki](https://github.com/MarkEdit-app/MarkEdit-theming/wiki#customization) for details.

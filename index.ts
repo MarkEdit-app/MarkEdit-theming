@@ -5,11 +5,15 @@ import { buildBlendedTheme } from './src/builder';
 import { selectors, cssText } from './src/const';
 import { injectStyles, extractTheme, extractTaggedColor, findBackground, lighterColor, isEmptyObject } from './src/utils';
 import { settingsForKey, enabledMode, isModeEnabled } from './src/settings';
+import { buildPreviewCss } from './preview';
 
 import type { EditorView } from '@codemirror/view';
 import type { TagStyle } from '@codemirror/language';
 import type { Colors } from './colors';
+import type { PreviewStyles } from './preview';
 import type { OriginalRules } from './src/types';
+
+export type { PreviewStyles, PreviewElementStyles } from './preview';
 
 /**
  * @public
@@ -80,6 +84,12 @@ export interface CustomTheme {
    * The colors for editor theme, syntax highlighting, etc.
    */
   colors?: Colors;
+  /**
+   * Styles for the [MarkEdit-preview](https://github.com/MarkEdit-app/MarkEdit-preview) pane, applied when this theme is active.
+   *
+   * It is a no-op when the preview extension is not installed.
+   */
+  previewStyles?: PreviewStyles;
 }
 
 // MARK: - Private
@@ -94,6 +104,7 @@ const $global = (window as unknown) as {
   __markeditTheming__: { // The package namespace
     mainThemeName?: string;
     styleSheet: HTMLStyleElement;
+    previewStyleSheet?: HTMLStyleElement;
     configurator: Compartment;
     customThemes: Parameters<typeof overrideThemes>[0];
     lightOriginalRules: OriginalRules;
@@ -149,6 +160,11 @@ function updateTheme(editor: EditorView) {
   const isDark = $scheme.matches;
   const theme = isDark ? $context().customThemes.dark : $context().customThemes.light;
   const { extensions, colors } = buildBlendedTheme(isDark, theme?.extension, theme?.colors);
+
+  // Style the preview pane, lazily creating the style sheet since the
+  // shared context may have been initialized by an older copy of the package
+  const previewStyleSheet = $context().previewStyleSheet ??= injectStyles('');
+  previewStyleSheet.textContent = theme?.previewStyles !== undefined ? buildPreviewCss(theme.previewStyles) : '';
 
   // Reconfigure the extension
   editor.dispatch({
