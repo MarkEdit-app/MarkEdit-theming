@@ -2,6 +2,20 @@
   "name": "markedit-theming",
   "version": "0.17.0",
   "description": "Create custom MarkEdit themes easily.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MarkEdit-app/MarkEdit-theming.git"
+  },
+  "files": [
+    "dist/index.js",
+    "dist/index.cjs",
+    "dist/index.d.ts",
+    "dist/colors.d.ts"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
   "scripts": {
     "lint": "eslint . --config eslint.config.mjs",
     "build": "yarn lint && vite build && node build.mjs"
